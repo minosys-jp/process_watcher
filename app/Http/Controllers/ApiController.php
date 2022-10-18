@@ -144,43 +144,52 @@ class ApiController extends Controller
     }
 
     private function queueDiscord($message, int $did, int $tid) {
-        $this->discord_queue[] = [ 'time' => Carbon::now(), 'message' => $message, 'domain_id' => $did, 'tenant_id' => $tid ];
+        $key = $tid . ":" . $did;
+        if (!isset($this->discord_queue[$key])) {
+            $this->discord_queue[$key] = [];
+        }
+        $this->discord_queue[$key] = [ 'time' => Carbon::now(), 'message' => $message, 'domain_id' => $did, 'tenant_id' => $tid ];
     }
 
     private function postDiscord() {
         $client = new Client;
-        foreach ($this->discord_queue as $item) {
+        foreach ($this->discord_queue as $dtkey => $messages) {
+            $ids = explode(":", $dtkey);
             // domain id 毎に discord 送信
-            $config1 = Configure::where('tenant_id', $item['tenant_id'])
-                ->where('domain_id', $item['domain_id']);
-            $config2 = Configure::where('tenant_id', $item['tenant_id'])
-                ->where('domain_id', $item['domain_id']);
-            $this->postDiscordInt($client, $config1, $config2, $item['message'], $item['time']);
+            $config1 = Configure::where('tenant_id', $ids[0])
+                ->where('domain_id', $ids[1]);
+            $config2 = Configure::where('tenant_id', $ids[0])
+                ->where('domain_id', $ids[1]);
+            $this->postDiscordInt($client, $config1, $config2, $messages);
 
+            $config1 = Configure::where('tenant_id', $ids[0])
+                ->where('domain_id', $ids[1]);
+            $config2 = Configure::where('tenant_id', $ids[0])
+                ->where('domain_id', $ids[1]);
             // ワイルドカードユーザへの送信
-            $config1 = Configure::where('tenant_id', $item['tenant_id'])
-                ->whereNull('domain_id');
-            $config2 = Configure::where('tenant_id', $item['tenant_id'])
-                ->whereNull('domain_id');
-            $this->postDiscordInt($client, $config1, $config2, $item['message'], $item['time']);
+            $this->postDiscordInt($client, $config1, $config2, $messages);
         }
     }
 
-    private function postDiscordInt($client, $config1, $config2, $message, $time) {
+    private function postDiscordInt($client, $config1, $config2, $messages) {
         $urls = $config1->where('ckey', 'discord_url')->pluck('cvalue');
         $users = $config2->where('ckey', 'discord_user')->pluck('cvalue');
+        $user = '';
+        if ($users->count() > 0) {
+            $user = implode(' ', $users->toArray()) . ' ';
+        }
+        $message = $user;
+        foreach ($messages as $m) {
+            $message .= $user . $m['time']->format(' [Y-m-d H:i:s] ') . $m['message'] . ";";
+        }
+
         foreach ($urls as $url) {
-            $user = '';
-            if ($users->count() > 0) {
-                $user = implode(' ', $users->toArray());
-            }
-            $content = $user . $time->format(' [Y-m-d H:i:s] ') . $message;
             $option = [
                 'verify' => false,
                 'headers' => [
                     'Accept' => 'application/json',
                 ],
-                'json' => [ 'content' => $content ],
+                'json' => [ 'content' => $message ],
             ];
             $client->request('POST', $url, $option);
         }
