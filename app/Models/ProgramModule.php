@@ -17,6 +17,9 @@ class ProgramModule extends Model
         'updated_at' => 'datetime:Y-m-d',
     ];
 
+    public const FLG_BLACK = 1;
+    public const FLG_WHITE = 2;
+
     public function hostname() {
         return $this->belongsTo(Hostname::class);
     }

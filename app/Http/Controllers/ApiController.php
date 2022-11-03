@@ -12,9 +12,9 @@ use App\Models\ProgramModule;
 use App\Models\FingerPrint;
 use App\Models\Graph;
 use App\Models\Configure;
+use App\Models\DiscordNotify;
 use GuzzleHttp\Client;
 use Carbon\Carbon;
-
 class ApiController extends Controller
 {
     private $discord_queue = [];
@@ -28,6 +28,7 @@ class ApiController extends Controller
         $host_code = $request->hostname;
         $fingers = $request->fingers;
         $graphs = $request->graphs;
+        $type_id = DiscordNotify::TYPE_UPDATE;
 
         // テナント、ドメインの登録を確認
         $tenant = Tenant::where('code', $tenant_code)->first();
@@ -58,53 +59,26 @@ class ApiController extends Controller
                 $hostname->code = $host_code;
                 $hostname->name = $host_code;
                 $hostname->save();
-                $this->queueDiscord('New Host: ' . $hostname->name, $domain->id, $tenant->id);
             }
     
             // フィンガープリントの更新
             if ($fingers && is_array($fingers)) {
-                $bNewProc = false;
-                $newProcs = [];
-                $countProcs = 0;
                 foreach ($fingers as $finger) {
-                    if (!array_key_exists('name', $finger) || !array_key_exists('finger', $finger)) {
+                    if (!array_key_exists('name', $finger) || !array_key_exists('finger', $finger) || array_key_exists('flg_white', $finger)) {
                         continue;
                     }
 
-                    $proc = ProgramModule::where('name', $finger['name'])
-                        ->where('hostname_id', $hostname->id)
-                        ->first();
-                    if ($proc) {
-                        // 既存プログラムの更新
-                        $proc->version += 1;
-                        $bNewProc = false;
-                    } else {
-                        // 新規プログラムの登録
-                        $proc = new ProgramModule;
-                        $proc->name = $finger['name'];
-                        $proc->hostname_id = $hostname->id;
-                        $proc->version = 1;
-                        $countProcs += 1;
-                        if ($countProcs < 5) {
-                            $newProcs[] = basename($proc->name);
-                        }
+                    $type_id = DiscordNotify::TYPE_UPDATE;
+                    if ($this->updateFingerPrint($finger, $hostname)) {
+                        // discord notifier
+                        $dn = new DiscordNotify;
+                        $dn->tenant_id = $tenant->id;
+                        $dn->domain_id = $domain->id;
+                        $db->hostname_id = $hostname->id;
+                        $db->type_id = $type_id;
+                        $db->finger_print_id = $fprinst->id;
+                        $db->save();
                     }
-                    $proc->save();
-                    $fprints = new FingerPrint;
-                    $fprints->program_module_id = $proc->id;
-                    $fprints->version = $proc->version;
-                    $fprints->finger_print = $finger['finger'];
-                    $fprints->save();
-                }
-                if (!$bNewProc) {
-                    $this->queueDiscord('Updated Finger-print Host: ' . $hostname->name, $domain->id, $tenant->id);
-                }
-                if (count($newProcs) > 0) {
-                    $procs = implode(' ', $newProcs);
-                    if ($countProcs >= 5) {
-                        $procs += " etc.";
-                    }
-                    $this->queueDiscord('New program: ' . $procs . " on " . $hostname->name, $domain->id, $tenant->id);
                 }
             }
 
@@ -123,9 +97,17 @@ class ApiController extends Controller
                         $graph->child_id = $module_dll->id;
                         $graph->child_version = $module_dll->version;
                         $graph->save();
+
+                        // discord notifies
+                        $dn = new DiscordNotify;
+                        $dn->tenant_id = $tenant->id;
+                        $db->domain_id = $domain->id;
+                        $db->hostname_id = $hostname->id;
+                        $db->type_id = DiscordNotify::TYPE_UPDATE;
+                        $db->graph_id = $graph->id;
+                        $db->save();
                     }
                 }
-                $this->queueDiscord('Updated graphs Host: ' . $hostname->name, $domain->id, $tenant->id);
             }
 
             DB::commit();
@@ -134,65 +116,40 @@ class ApiController extends Controller
             return response()->json([ false, $e->getMessage() ]);
         }
 
-        try {
-            $this->postDiscord();
-        } catch (\Exception $e) {
-            return response()->json([ false, $e->getMessage() ]);
-        }
-
-        return response()->json([ true ]);
+        return response()->json([ true, null ]);
     }
 
-    private function queueDiscord($message, int $did, int $tid) {
-        $key = $tid . ":" . $did;
-        if (!isset($this->discord_queue[$key])) {
-            $this->discord_queue[$key] = [];
+    private function updateFingerPrint($proc, $finger, $hostname) {
+        $fprints = null;
+        $proc = ProgramModule::where('name', $finger['name'])
+            ->where('hostname_id', $hostname->id)
+            ->first();
+        if ($proc) {
+            $fprints = FingerPrint::where('program_module_id', $proc->id)
+                ->where('version', $proc->version)
+                ->first();
         }
-        $this->discord_queue[$key] = [ 'time' => Carbon::now(), 'message' => $message, 'domain_id' => $did, 'tenant_id' => $tid ];
-    }
+        if (!$fprints || $fprints->finger_print !== $finger['finger']) {
+            if ($proc) {
+                $proc->version += 1;
+            } else {
+                $proc = new ProgramModule;
+                $proc->name = $finger['name'];
+                $proc->hostname_id = $hostname->id;
+                $proc->version = 1;
+                $type_id = DiscordNotify::TYPE_NEW;
+            }
+            $proc->flg_white = $finger['flg_white'];
+            $proc->save();
 
-    private function postDiscord() {
-        $client = new Client;
-        foreach ($this->discord_queue as $dtkey => $messages) {
-            $ids = explode(":", $dtkey);
-            // domain id 毎に discord 送信
-            $config1 = Configure::where('tenant_id', $ids[0])
-                ->where('domain_id', $ids[1]);
-            $config2 = Configure::where('tenant_id', $ids[0])
-                ->where('domain_id', $ids[1]);
-            $this->postDiscordInt($client, $config1, $config2, $messages);
-
-            $config1 = Configure::where('tenant_id', $ids[0])
-                ->where('domain_id', $ids[1]);
-            $config2 = Configure::where('tenant_id', $ids[0])
-                ->where('domain_id', $ids[1]);
-            // ワイルドカードユーザへの送信
-            $this->postDiscordInt($client, $config1, $config2, $messages);
+            $fprints = new FingerPrint;
+            $fprints->program_module_id = $proc->id;
+            $fprints->version = $proc->version;
+            $fprints->finger_print = $finger['finger'];
+            $fprints->save();
+            return TRUE;
         }
-    }
-
-    private function postDiscordInt($client, $config1, $config2, $messages) {
-        $urls = $config1->where('ckey', 'discord_url')->pluck('cvalue');
-        $users = $config2->where('ckey', 'discord_user')->pluck('cvalue');
-        $user = '';
-        if ($users->count() > 0) {
-            $user = implode(' ', $users->toArray()) . ' ';
-        }
-        $message = $user;
-        foreach ($messages as $m) {
-            $message .= $user . $m['time']->format(' [Y-m-d H:i:s] ') . $m['message'] . ";";
-        }
-
-        foreach ($urls as $url) {
-            $option = [
-                'verify' => false,
-                'headers' => [
-                    'Accept' => 'application/json',
-                ],
-                'json' => [ 'content' => $message ],
-            ];
-            $client->request('POST', $url, $option);
-        }
+        return $finger['flg_white'] === ProgramModule::FLG_BLACK;
     }
 
     private function loadModule(&$cache, $modname, int $hid) {

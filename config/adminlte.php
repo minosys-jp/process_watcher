@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'title' => 'AdminLTE 3',
+    'title' => 'プロセス監視',
     'title_prefix' => '',
     'title_postfix' => '',
 
@@ -63,7 +63,7 @@ return [
     |
     */
 
-    'logo' => '<b>Admin</b>LTE',
+    'logo' => 'プロセス監視',
     'logo_img' => 'vendor/adminlte/dist/img/AdminLTELogo.png',
     'logo_img_class' => 'brand-image img-circle elevation-3',
     'logo_img_xl' => null,
@@ -290,6 +290,73 @@ return [
     */
 
     'menu' => [
+        [
+            'text' => '管理者',
+            'icon' => 'fas fa-fw fa-user',
+            'submenu' => [
+                [
+                    'text' => '一覧',
+                    'url' => '/user',
+                ],
+                [
+                    'text' => '作成',
+                    'url' => '/user/create',
+                ],
+            ],
+        ],
+        [
+            'text' => 'テナント',
+            'icon'    => 'fas fa-fw fa-share',
+            'submenu' => [
+                [
+                    'text' => '一覧',
+                    'url' => '/tenant',
+                ],
+                [
+                    'text' => '作成',
+                    'url' => '/tenant/create',
+                ],
+            ],
+        ],
+        [
+            'text' => 'ドメイン',
+            'icon' => 'fas fa-fw fa-store',
+            'submenu' => [
+                [
+                    'text' => '一覧',
+                    'url' => '/domain',
+                ],
+                [
+                    'text' => '作成',
+                    'url' => '/domain/create',
+                ],
+            ],
+        ],
+        [
+            'text' => '受信者',
+            'icon' => 'fas fa-fw fa-user-friends',
+            'submenu' => [
+                [
+                    'text' => '一覧',
+                    'url' => '/receiver',
+                ],
+                [
+                    'text' => '作成',
+                    'url' => '/receiver/create',
+                ],
+            ],
+        ],
+        [
+            'text' => '設定パラメータ',
+            'icon' => 'fas fa-fw fa-file',
+            'submenu' => [
+                [
+                    'text' => '一覧',
+                    'url' => '/config',
+                ],
+            ],
+        ],
+    /*
         // Navbar items:
         [
             'type'         => 'navbar-search',
@@ -383,6 +450,7 @@ return [
             'icon_color' => 'cyan',
             'url'        => '#',
         ],
+    */
     ],
 
     /*

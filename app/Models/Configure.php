@@ -20,6 +20,14 @@ class Configure extends Model
     private static $singleton_str = [];
     private static $singleton_num = [];
 
+    public function tenant() {
+        return $this->belongsTo(Tenant::class);
+    }
+
+    public function domain() {
+        return $this->belongsTo(Domain::class);
+    }
+
     private function loadStr($tenant) {
         $conf = $this->whereNotNull('cvalue');
         if ($tenant === null) {

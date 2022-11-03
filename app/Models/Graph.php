@@ -16,4 +16,12 @@ class Graph extends Model
         'created_at' => 'datetime:Y-m-d',
         'updated_at' => 'datetime:Y-m-d',
     ];
+
+    public function parentModule() {
+        return $this->belongsTo(ProgramModule::class, 'parent_id');
+    }
+
+    public function childModule() {
+        return $this->belongsTo(ProgramModule::class, 'child_id');
+    }
 }
