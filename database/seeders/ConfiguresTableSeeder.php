@@ -26,5 +26,10 @@ class ConfiguresTableSeeder extends Seeder
             'ckey' => 'discord_user',
             'cvalue' => '<@!938604248067887156>',
         ]);
+        Configure::create([
+            'tenant_id' => 1,
+            'ckey' => 'email_to',
+            'cvalue' => 'minosys3@gmail.com',
+        ]);
     }
 }
