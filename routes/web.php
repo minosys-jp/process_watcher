@@ -7,6 +7,7 @@ use App\Http\Controllers\ReceiverController;
 use App\Http\Controllers\HostnameController;
 use App\Http\Controllers\ProgramModuleController;
 use App\Http\Controllers\ConfigureController;
+use App\Http\Controllers\ApiController;
 
 /*
 |--------------------------------------------------------------------------
