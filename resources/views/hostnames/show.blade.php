@@ -12,6 +12,13 @@
             <div class="card">
                 <div class="card-header">
                     <h3>{{ $hostname->name }}</h3>
+                    <form>
+                        <div class="form-group">
+                            <label for="search">検索文字列</label>
+                            <input type="text" id="search" name="search" @empty ($search) value="{{ old('search') }}" @else value="{{ old('search', $search) }}" @endempty >
+                        </div>
+                        <button class="btn btn-primary">検索</button>
+                    </form>
                 </div>
                 <div class="card-body">
                     <table class="table">
@@ -37,7 +44,11 @@
                     </table>
                 </div>
                 <div class="card-footer">
+@empty ($search)
                     {{ $modules->links() }}
+@else
+                    {{ $modules->appends(['search' => $search])->links() }}
+@endempty
                 </div>
             </div>
         </div>

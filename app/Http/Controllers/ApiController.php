@@ -29,10 +29,12 @@ class ApiController extends Controller
         $fingers = $request->fingers;
         $graphs = $request->graphs;
         $type_id = DiscordNotify::TYPE_UPDATE;
+	Log::debug("tenant:" . $tenant_code . ",domain:" . $domain_code . ",host:" . $host_code);
 
         // テナント、ドメインの登録を確認
         $tenant = Tenant::where('code', $tenant_code)->first();
         if ($tenant === null) {
+            Log::debug("tenant not found");
             abort(404);
         }
         try {
@@ -42,6 +44,7 @@ class ApiController extends Controller
                 ->where('tenants.code', $tenant_code)
                 ->first();
             if ($domain === null) {
+                Log::debug("domain not found");
                 abort(404);
             }
     
@@ -59,24 +62,27 @@ class ApiController extends Controller
                 $hostname->code = $host_code;
                 $hostname->name = $host_code;
                 $hostname->save();
+		Log::debug("new host");
             }
     
             // フィンガープリントの更新
             if ($fingers && is_array($fingers)) {
+Log::debug("fingers:" . count($fingers));
                 foreach ($fingers as $finger) {
-                    if (!array_key_exists('name', $finger) || !array_key_exists('finger', $finger) || array_key_exists('flg_white', $finger)) {
+                    if (!array_key_exists('name', $finger) || !array_key_exists('finger', $finger) || !array_key_exists('flg_white', $finger)) {
                         continue;
                     }
 
                     $type_id = DiscordNotify::TYPE_UPDATE;
-                    if ($this->updateFingerPrint($finger, $hostname)) {
+		    $fpid = $this->updateFingerPrint($finger, $hostname);
+		    if ($fpid !== FALSE && $finger['flg_white'] !== 2) {
                         // discord notifier
-                        $dn = new DiscordNotify;
-                        $dn->tenant_id = $tenant->id;
-                        $dn->domain_id = $domain->id;
+                        $db = new DiscordNotify;
+                        $db->tenant_id = $tenant->id;
+                        $db->domain_id = $domain->id;
                         $db->hostname_id = $hostname->id;
                         $db->type_id = $type_id;
-                        $db->finger_print_id = $fprinst->id;
+                        $db->finger_print_id = $fpid;
                         $db->save();
                     }
                 }
@@ -85,12 +91,24 @@ class ApiController extends Controller
             // 実行ファイルグラフの更新
             $cache = [];
             if ($graphs && is_array($graphs)) {
+Log::debug("graphs:" . count($graphs));
                 foreach ($graphs as $graph) {
                     $exe = $graph['exe'];
+                    if (!array_key_exists('dlls', $graph)) {
+                        continue;
+                    }
                     $dlls = $graph['dlls'];
                     $module_exe = $this->loadModule($cache, $exe, $hostname->id);
+                    if (!$module_exe) {
+                        Log::error("missing " . $exe);
+                        continue;
+                    }
                     foreach ($dlls as $dll) {
                         $module_dll = $this->loadModule($cache, $dll, $hostname->id);
+                        if (!$module_dll) {
+                            Log::error("missing " . $module_dll);
+                            continue;
+                        }
                         $graph = new Graph;
                         $graph->parent_id = $module_exe->id;
                         $graph->parent_version = $module_exe->version;
@@ -99,8 +117,8 @@ class ApiController extends Controller
                         $graph->save();
 
                         // discord notifies
-                        $dn = new DiscordNotify;
-                        $dn->tenant_id = $tenant->id;
+                        $db = new DiscordNotify;
+                        $db->tenant_id = $tenant->id;
                         $db->domain_id = $domain->id;
                         $db->hostname_id = $hostname->id;
                         $db->type_id = DiscordNotify::TYPE_UPDATE;
@@ -112,6 +130,7 @@ class ApiController extends Controller
 
             DB::commit();
         } catch (\Exception $e) {
+            Log::error($e);
             DB::rollback();
             return response()->json([ false, $e->getMessage() ]);
         }
@@ -119,7 +138,7 @@ class ApiController extends Controller
         return response()->json([ true, null ]);
     }
 
-    private function updateFingerPrint($proc, $finger, $hostname) {
+    private function updateFingerPrint($finger, $hostname) {
         $fprints = null;
         $proc = ProgramModule::where('name', $finger['name'])
             ->where('hostname_id', $hostname->id)
@@ -130,6 +149,10 @@ class ApiController extends Controller
                 ->first();
         }
         if (!$fprints || $fprints->finger_print !== $finger['finger']) {
+		if (!$finger['finger']) {
+			Log::error("finger missing:" . $finger['name']);
+			return FALSE;
+	        }
             if ($proc) {
                 $proc->version += 1;
             } else {
@@ -147,9 +170,9 @@ class ApiController extends Controller
             $fprints->version = $proc->version;
             $fprints->finger_print = $finger['finger'];
             $fprints->save();
-            return TRUE;
+            return $fprints->id;
         }
-        return $finger['flg_white'] === ProgramModule::FLG_BLACK;
+        return FALSE;
     }
 
     private function loadModule(&$cache, $modname, int $hid) {

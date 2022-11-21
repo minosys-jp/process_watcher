@@ -27,7 +27,8 @@ class HostnameController extends Controller
     /**
      * ホストの詳細表示
      */
-    public function show($hid) {
+    public function show(Request $request, $hid) {
+	$search = $request->search;
         $hostname = Hostname::find($hid);
         if (!$hostname) {
             abort(404);
@@ -38,9 +39,12 @@ class HostnameController extends Controller
                         $join->on('program_modules.name', 'pm2.name')
                             ->on('program_modules.version', 'pm2.version');
                     })
-            ->where('program_modules.hostname_id', $hid)
-            ->paginate(50);
-        return view('hostnames.show')->with(compact('hostname', 'modules'));
+            ->where('program_modules.hostname_id', $hid);
+        if ($search) {
+            $modules = $modules->where('program_modules.name', 'like', "%$search%");
+        }
+        $modules = $modules->paginate(50);
+        return view('hostnames.show')->with(compact('hostname', 'modules', 'search'));
     }
 
     /**

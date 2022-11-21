@@ -22,7 +22,7 @@
                         <tr>
                             <td>{{ $parent->parent_id }}</td>
                             <td>{{ $parent->parentModule->name }}</td>
-                            <td>{{ $parent->updated_at }}</td>
+                            <td>{{ $parent->created_at }}</td>
                             <td>
                                 <a href="{{ route('module.child_history', $parent->parent_id) }}" class="btn btn-primary">従属DLL群</a>
                             </td>

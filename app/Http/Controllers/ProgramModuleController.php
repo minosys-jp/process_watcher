@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Models\Hostname;
 use App\Models\ProgramModule;
 use App\Models\Graph;
@@ -28,13 +29,14 @@ class ProgramModuleController extends Controller
 
     public function graph_history($modid) {
         $module = ProgramModule::find($modid);
-        $parents = Graph::select('graphs.id', 'parent_id', 'parent_version', 'graphs.created_at')
+        $parents = Graph::select('parent_id', DB::raw('min(child_id)'), 'graphs.created_at')
             ->join('program_modules as pm2', function($qq) {
                 return $qq->on('pm2.id', 'parent_id');
             })
             ->where('pm2.hostname_id', $module->hostname_id)
             ->where('pm2.name', $module->name)
-            ->orderBy('graphs.id', 'desc')
+            ->groupBy(['parent_id', 'graphs.created_at'])
+            ->orderBy('parent_id', 'desc')
             ->paginate(50);
         return view('modules.graph_history')->with(compact('parents'));
     }
@@ -48,12 +50,13 @@ class ProgramModuleController extends Controller
 
     public function dll_history($dllid) {
         $module = ProgramModule::find($dllid);
-        $children = Graph::select('child_id', 'child_version', 'graphs.created_at')
+        $children = Graph::select('child_id', DB::raw('max(child_version) as child_version'), 'graphs.created_at')
             ->join('program_modules as pm2', function($qq) {
-                return $qq->on('pm2.id', 'child_id');
+                return $qq->on('pm2.id', 'parent_id');
             })
             ->where('pm2.hostname_id', $module->hostname_id)
             ->where('pm2.name', $module->name)
+            ->groupBy(['child_id', 'graphs.created_at'])
             ->orderBy('graphs.id', 'desc')
             ->distinct()
             ->get();
