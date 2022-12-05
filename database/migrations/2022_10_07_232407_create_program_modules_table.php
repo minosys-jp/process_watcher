@@ -18,7 +18,8 @@ return new class extends Migration
             $table->string('name', 1024)->index()->comment('プロセス名');
             $table->unsignedBigInteger('hostname_id')->comment('ホストID');
             $table->unsignedBigInteger('version')->comment('バージョン');
-            $table->tinyInteger('flg_white')->default(1)->comment('W/B flag');
+            $table->tinyInteger('status')->default(1)->comment('W/B/G status');
+            $table->tinyInteger('flg_notified')->default(1)->comment('host へ通知済みかどうか');
             $table->datetime('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
             $table->datetime('updated_at')->default(DB::raw('CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP'));
         });

@@ -31,5 +31,10 @@ class ConfiguresTableSeeder extends Seeder
             'ckey' => 'email_to',
             'cvalue' => 'minosys3@gmail.com',
         ]);
+        Configure::create([
+            'tenant_id' => 1,
+            'ckey' => 'kill_black_processes',
+            'cnum' => 1,    // kill black process
+        ]);
     }
 }

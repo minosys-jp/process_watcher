@@ -13,7 +13,7 @@ class ProgramModuleController extends Controller
 {
     //
     public function sha_history($modid) {
-        $shas = FingerPrint::select('finger_prints.id', 'pm.name', 'pm.flg_white', 'finger_prints.version', 'finger_print', 'finger_prints.created_at')
+        $shas = FingerPrint::select('finger_prints.id', 'pm.name', 'pm.status', 'finger_prints.version', 'finger_print', 'finger_prints.created_at')
             ->join('program_modules as pm', function($qq) {
                 return $qq->on('pm.id', 'finger_prints.program_module_id');
             })
@@ -24,7 +24,19 @@ class ProgramModuleController extends Controller
             ->where('pm2.id', $modid)
             ->orderBy('finger_prints.id', 'desc')
             ->paginate(50);
-        return view('modules.sha_history')->with(compact('shas'));
+        $module = ProgramModule::find($modid);
+        return view('modules.sha_history')->with(compact('shas', 'module'));
+    }
+
+    public function change_status(Request $req, $modid) {
+        $pm = ProgramModule::find($modid);
+        if (!$pm) {
+            abort(404);
+        }
+        $pm->status = $req->status;
+        $pm->save();
+        session()->flash('flashSuccess', '状態を更新しました');
+        return redirect()->route('module.sha_history', $pm->id);
     }
 
     public function graph_history($modid) {
