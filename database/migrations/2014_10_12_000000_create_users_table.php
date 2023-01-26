@@ -17,6 +17,8 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
+            $table->tinyInteger('flg_admin')->default(0)->comment('ADMIN なら1');
+            $table->unsignedBigInteger('tenant_id')->nullable(true)->comment('テナントID');
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();

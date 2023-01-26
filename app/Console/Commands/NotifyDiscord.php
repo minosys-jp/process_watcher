@@ -37,35 +37,45 @@ class NotifyDiscord extends Command
      * notify to discord server
      */
     private function notify2Discrd($last_updated, $next_update) {
-        $tenants = Tenant::pluck('name', 'id');
-        foreach ($tenants as $tid => $tname) {
-            $domains = Domain::where('tenant_id', $tid)->pluck('name', 'id');
-            foreach ($domains as $did => $dname) {
-                $urls = Configure::select('cvalue')
-                        ->where('tenant_id', $tid)->where('domain_id', $did)
-                        ->where('ckey', 'discord_url')->get();
-                if ($urls === null) {
-                    // search urls without domain id
-                    $urls = Configure::select('cvalue')
-                        ->where('tenant_id', $tid)
-                        ->where('ckey', 'discord_url')->get();
-                    if ($urls === null) {
-                        continue;
-                    }
+        $mlogs = ModuleLog::where('flg_discord', 0)->get();
+        $discords = [];
+        $hash = [];
+        foreach ($mlogs as $mlog) {
+            if ($mlog->finger_print_id) {
+                // finger print
+                $h = $mlog->finger_print->program_module->hostname;
+            } else {
+                // graph
+                $g = $mlog->graphs()->first();
+                if ($g) {
+                    $h = $g->parent->hostname;
                 }
-
-                $dns = DiscordNotify::select('hostnames.name', DB::raw('min(discord_notifies.id)'))
-                    ->join('hostnames', 'hostname.id', 'discord_notifies.hostname_id')
-                    ->where('discord_notifies.tenant_id', $tid)
-                    ->where('discord_notifies.domain_id', $did)
-                    ->whereBetween('discord_notifies.created_at', $last_updated, $next_update)
-                    ->groupBy('discord_notifies.hostname_id')
-                    ->get();
-                $hostnames = [];
-                foreach ($dns as $dn) {
-                    $hostnames[] = $dn['name'];
+            }
+            $d = $h->domain;
+            $t = $d->tenant;
+            if (in_array($t, $hash)) {
+                if (!in_array($d, $hash[$t->id])) {
+                    $hash[$t->id][$d->id] = [];
                 }
-                $hostlist = implode(',', $hostnames);
+            } else {
+                $hash[$t->id] = [];
+                $hash[$t->id][$d->id] = [];
+            }
+            $hash[$t->id][$d->id][] = $h->name;
+        }
+        foreach ($hash as $t => $hval) {
+            foreach ($hval as $d => $hnames) {
+                $url = Configure::select('cvalue')
+                        ->where('tenant_id', $t)->where('domain_id', $d)
+                        ->where('ckey', 'discord_url')->first();
+                if (!$url) {
+                    $url = Configure::select('cvalue')
+                        ->where('tenant_id', $t)
+                        ->where('ckey', 'discord_url')->first();
+                }
+                if (!$url) {
+                    continue;
+                }
                 $users = Configure::select('cvalue')
                         ->where('tenant_id', $tid)->where('domain_id', $did)
                         ->where('ckey', 'discord_user')
@@ -76,22 +86,30 @@ class NotifyDiscord extends Command
                         ->where('ckey', 'discord_user')
                         ->pluck('cvalue')->toArray();
                 }
-                $users = implode(' ', $users);
-                $client = new Client;
-                $headers = [
-                    'Content-Type: application/json',
-                    'Accept: application/json',
-                ];
-                $options = [
-                    'content' => "$users $hostlist@[$tname:$dname]",
-                ];
-                foreach ($urls as $url) {
-                    $client->request('post', $url['cvalue'], [
-                        'json' => $options,
-                        'headers' => $headers,
-                    ]);
+                if (count($users) === 0) {
+                    continue;
                 }
-            } 
+                $users = implode(' ', $users);
+                $tname = Tenant::find($t)->name;
+                $dname = Domain::find($d)->name;
+                $hostlist = implode(',', $hnames);
+                $discords[$url] = "$users $hostlist@[$tname:$dname]";
+            }
+        }
+        $client = new Client;
+        $headers = [
+            'Content-Type: application/json',
+            'Accept: application/json',
+        ];
+        foreach ($discords as $url => $content) {
+            $options = [
+                'content' => $content,
+            ];
+            $client->request('post', $url, [
+                'json' => $options,
+                'headers' => $headers,
+            ]);
+            usleep(10000);
         }
     }
 
@@ -99,61 +117,57 @@ class NotifyDiscord extends Command
      * notify to Email server
      */
     public function notify2Email($last_updated, $next_update) {
-        $tenants = Tenant::pluck('name', 'id');
-        foreach ($tenants as $tid => $tname) {
-            $mails = [];
-            $to = Configure::where('ckey', 'email_to')->first();
-            if ($to) {
-                $to = $to->cvalue;
-            }
-            $ccs_d = Configure::where('tenant_id', $tid)
-                ->whereNull('domain_id')
-                ->where('ckey', 'email_cc')
-                ->pluck('cvalue');
-            $domains = Domain::where('tenant_id', $tid)->pluck('name', 'id');
-            foreach ($domains as $did => $dname) {
-                $ccs = Configure::where('tenant_id', $tid)
-                    ->where('domain_id', $did)
-                    ->where('ckey', 'email_cc')
-                    ->pluck('cvalue');
-                $dns = DiscordNotify::where('tenant_id', $tid)
-                    ->where('domain_id', $did)
-                    ->whereBetween('created_at', $last_updated, $next_update)
-                    ->get();
-                $maili = [];
-                foreach ($dns as $dn) {
-                    if ($dn->finger_id) {
-                        $hostname = Hostname::find($dn->hostname_id);
-                        $finger = FingerPrint::find($dn->finger_id);
-                        $pm = ProgramModule::find($finger->program_module_id);
-                        $maili[$hostname->name]['fingers'][$pm->name] = [$dh->type_id, $pm->flg_white, $finger->finger_print];
-                    }
-                    if ($dn->graph_id) {
-                        $graph = Graph::find($dn->graph_id);
-                        $parent = ProgramModule::find($graph->parent_id);
-                        $child = ProgramModule::find($graph->child_id);
-                        $graphs[$parent->name][] = $child->name;
-                        $flg_graphs[$parent->name] = $dn->type_id;
-                        $flg_bw[$pm->name] = $pm->flg_white;
-                        $maili[$hostname->name]['graphs'][$parent->name]['child'][] = $child->name;
-                        $maili[$hostname->name]['graphs'][$parent->name]['child'][] = $child->name;
-                        $maili[$hostname->name]['graphs'][$parent->name]['type_id'] = $dn->type_id;
-                        $maili[$hostname->name]['graphs'][$parent->name]['flg_white'] = $pm->flg_white;
-                    }
+        $mlogs = ModuleLog::where('flg_discord', 0)
+               ->where('status', '>=', ModuleLog::FLG_BLACK1)
+               ->get();
+        $hash = [];
+        foreach ($mlogs as $mlog) {
+            if ($mlog->finger_print_id) {
+                // finger print
+                $pm = $mlog->finger_print->program_module;
+                $h = $pm->hostname;
+            } else {
+                // graph
+                $g = $mlog->graphs()->first();
+                if (!$g) {
+                    continue;
                 }
-                $mails[$dname] = $maili;
-                $ccs2to = implode(',', $ccs->toArray());
-                if ($ccs->length() > 0) {
-                    Mail::to($ccs2to)->send(new DiffNotifyMail([$dname => $maili]));
-                }
+                $pm = $g->parent;
+                $h = $g->parent->hostname;
             }
+            $d = $h->domain;
+            $t = $d->tenant;
+            if (!in_array($t->id, $hash)) {
+                $hash[$t->id] = [];
+            }
+            if (!in_array($d->id, $hash[$t->id])) {
+                $hash[$t->id][$d->id] = [];
+            }
+            if (!array_key_exists($h->name, $hash[$t->id][$d->id])) {
+                $hash[$t->id][$d->id] = [ $h->name => [] ];
+            }
+            $hash[$t->id][$d->id][$h->name] = $pm->name;
+        }
 
-            if ($to) {
-                if ($ccs_d) {
-                    Mail::to($to)->cc($ccs_d)->send(new DiffNotifyMail($mails));
-                } else {
-                    Mail::to($to)->send(new DiffNotifyMail($mails));
+        foreach ($hash as $tid => $domains) {
+            foreach ($domains as $did => $hosts) {
+                $mails = [];
+                $to = Configure::where('ckey', 'email_to')
+                    ->where('tenant_id', $tid)
+                    ->where('domain_id', $did)
+                    ->pluck('cvalue')->toArray();
+                if (count($to) === 0) {
+                    $to = Configure::where('ckey', 'email_to')
+                        ->where('tenant_id', $tid)
+                        ->pluck('cvalue')->toArray();
                 }
+                if (count($to) === 0) {
+                    continue;
+                }
+                $to = implode(',', $to);
+                $dname = Domain::find($did)->name;
+                Mail::to($to)->send(new DiffNotifyMail($dname, $hosts));
+                usleep(10000);
             }
         }
     }
@@ -176,6 +190,7 @@ class NotifyDiscord extends Command
             DB::beginTransaction();
             $this->notify2Discord($last_updated, $next_update);
             $this->notify2Email($last_updated, $next_update);
+            ModuleLog::where('flg_discord', 0)->update(['flg_discord', 1]);
 
             // update last invocation datetime
             if (!$last_update_config) {

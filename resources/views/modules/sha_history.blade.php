@@ -1,9 +1,9 @@
 @extends('adminlte::page')
 
-@section('title', '更新履歴')
+@section('title', '改変履歴')
 
 @section('content_header')
-    <h1 class="m-0 text-dark">更新履歴</h1>
+    <h1 class="m-0 text-dark">改変履歴</h1>
 @stop
 
 @section('content')
@@ -15,10 +15,11 @@
                         @csrf
                         @method('put')
                         <div class="form-group">
-                            <label for="status">プロセス状態: {{ \App\Models\ProgramModule::FLG_NAMES[$module->status] }}/{{ $module->notified ? '設定済み' : '設定待ち' }}</label>
+                            <label for="status">プロセス状態の更新</label>
                             <select id="status" name="status">
-                                <option value="1" selected>Black</option>
-                                <option value="2">White</option>
+                                <option value="{{ \App\Models\ModuleLog::FLG_WHITE" selected>WHITE</option>
+                                <option value="{{ \App\Models\ModuleLog::FLG_BLACK1" selected>BLACK1 (停止なし)</option>
+                                <option value="{{ \App\Models\ModuleLog::FLG_BLACK2" selected>BLACK2 (停止あり)</option>
                             </select>
                         </div>
                         <button class="btn btn-primary">設定</button>
@@ -26,14 +27,14 @@
                     <table class="table">
                         <tr>
                             <th>番号</th>
-                            <th>バージョン</th>
+                            <th>状態</th>
                             <th>ハッシュ値</th>
                             <th>更新日時</th>
                         </tr>
                         @foreach ($shas as $sha)
                         <tr>
                             <td>{{ $sha->id }}</td>
-                            <td>{{ $sha->version }}</td>
+                            <td class="@if ($status >= \App\Models\ModuleLog::FLG_BLACK1) red @endif ">{{ \App\Models\ModuleLog::FLG_NAMES[$sha->status] }}
                             <td>{{ $sha->finger_print }}</td>
                             <td>{{ $sha->created_at }}</td>
                         </tr>
@@ -47,3 +48,9 @@
         </div>
     </div>
 @stop
+@push('css')
+.red {
+    font-weight: bold;
+    color: red;
+}
+@endpush

@@ -21,6 +21,8 @@ class UsersTableSeeder extends Seeder
             'email' => 'minoru@minosys.com',
             'name' => 'Minoru Matsumoto',
             'password' => Hash::make('matsumoto21'),
+            'flg_admin' => 1,
+            'tenant_id' => null,
         ]);
     }
 }

@@ -9,7 +9,7 @@ class Graph extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'parent_id', 'child_id', 'parent_version', 'child_version',
+        'parent_id', 'child_id'
     ];
 
     protected $casts = [
@@ -17,11 +17,15 @@ class Graph extends Model
         'updated_at' => 'datetime:Y-m-d',
     ];
 
-    public function parentModule() {
+    public function parent() {
         return $this->belongsTo(ProgramModule::class, 'parent_id');
     }
 
-    public function childModule() {
+    public function child() {
         return $this->belongsTo(ProgramModule::class, 'child_id');
+    }
+
+    public function module_logs() {
+        return $this->belongsToMany(ModuleLog::class);
     }
 }

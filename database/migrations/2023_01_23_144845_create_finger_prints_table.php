@@ -13,10 +13,11 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('program_modules', function (Blueprint $table) {
+        Schema::create('finger_prints', function (Blueprint $table) {
             $table->id();
-            $table->string('name', 1024)->index()->comment('プロセス名');
-            $table->unsignedBigInteger('hostname_id')->comment('ホストID');
+            $table->unsignedBigInteger('program_module_id')->index()->comment('モジュールID');
+            $table->string('fingper_print', 1024)->comment('フィンガープリント');
+            $table->unsignedBigInteger('next_id')->nullable(true)->index()->comment('次のID');
             $table->datetime('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
             $table->datetime('updated_at')->default(DB::raw('CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP'));
         });
@@ -29,6 +30,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('program_modules');
+        Schema::dropIfExists('finger_prints');
     }
 };

@@ -21,17 +21,18 @@ class DiffNotifyMail extends Mailable
     use Queueable, SerializesModels;
 
     // domains must be domain_name => [types => [name => type_id], graphs => [graph_parent_name => [graph_child_name]], fingers => [module_names => finger_print]]
-    private $domains;
+    public $dname, $programs;
 
     /**
      * Create a new message instance.
      *
      * @return void
      */
-    public function __construct($domains)
+    public function __construct($dname, $programs)
     {
         //
-        $this->domains = $domains;
+        $this->dname = $dname;
+        $this->programs = $programs;
     }
 
     /**

@@ -13,18 +13,18 @@
                 <div class="card-body">
                     <table class="table">
                         <tr>
-                            <th>親番号</th>
-                            <th>名称</th>
+                            <th>番号</th>
+                            <th>DLL 数</th>
                             <th>更新日時</th>
                             <th>操作</th>
                         </tr>
-                        @foreach ($parents as $parent)
+                        @foreach ($mlogs as $mlog)
                         <tr>
-                            <td>{{ $parent->parent_id }}</td>
-                            <td>{{ $parent->parentModule->name }}</td>
-                            <td>{{ $parent->created_at }}</td>
+                            <td>{{ $mlog->id }}</td>
+                            <td>{{ $mlog->groups()->count() }}</td>
+                            <td>{{ $mlog->created_at }}</td>
                             <td>
-                                <a href="{{ route('module.child_history', $parent->parent_id) }}" class="btn btn-primary">従属DLL群</a>
+                                <a href="{{ route('module.child_history', $mlog->id) }}" class="btn btn-primary">従属DLL群</a>
                             </td>
                         </tr>
                         @endforeach

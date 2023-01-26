@@ -20,20 +20,18 @@ class FingerPrintsTableSeeder extends Seeder
         FingerPrint::create([
             'id' => 1,
             'program_module_id' => 1,
-            'version' => 1,
             'finger_print' => Hash::make("0123456789ABCDEF"),
+            'next_id' => 2,
         ]);
         FingerPrint::create([
             'id' => 2,
             'program_module_id' => 2,
-            'version' => 2,
-            'finger_print' => Hash::make("ABCDEFGHIJKLMNOP"),
+            'finger_print' => Hash::make('aoeiuroihgjs;odh90900OASKODFJ'),
         ]);
         FingerPrint::create([
             'id' => 3,
-            'program_module_id' => 3,
-            'version' => 1,
-            'finger_print' => Hash::make('aoeiuroihgjs;odh90900OASKODFJ'),
+            'program_module_id' => 1,
+            'finger_print' => Hash::make("ABCDEFGHIJKLMNOP"),
         ]);
     }
 }

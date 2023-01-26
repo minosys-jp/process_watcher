@@ -18,11 +18,18 @@ class ReceiverController extends Controller
     {
         //
         $vars = [];
-        if ($request->has('tenant')) {
+        if (auth()->user()->tenant_id) {
+            $tenant_id = auth()->user()->tenant_id;
+            $vars['tenant'] = Tenant::find($tenant_id);
+            $vars['receivers'] = Receiver::where('tenant_id', $request->tenant)->paginate(50)->appends(['tenant' => $request->tenant]);
+            $vars['tenants'] = Tenant::where('id', $tenant_id)->get();
+        } else if ($request->has('tenant')) {
             $vars['tenant'] = Tenant::find($request->tenant);
             $vars['receivers'] = Receiver::where('tenant_id', $request->tenant)->paginate(50)->appends(['tenant' => $request->tenant]);
+            $vars['tenants'] = Tenant::get();
+        } else {
+            $vars['tenants'] = Tenant::get();
         }
-        $vars['tenants'] = Tenant::get();
         return view('receivers.index')->with($vars);
     }
 
@@ -34,7 +41,11 @@ class ReceiverController extends Controller
     public function create()
     {
         //
-        $tenants = Tenant::get();
+        if (auth()->user()->tenant_id) {
+            $tenants = Tenant::where('id', auth()->user()->tenant_id)->get();
+        } else {
+            $tenants = Tenant::get();
+        }
         return view('receivers.create')->with(compact('tenants'));
     }
 
@@ -47,10 +58,14 @@ class ReceiverController extends Controller
     public function store(Request $request)
     {
         //
-        $receiver = new Receiver;
-        $receiver->fill($request->only(['email', 'tenant_id']));
-        $receiver->save();
-        session()->flash('flashSuccess', '引き続き受信対象ドメインを設定してください');
+        if (!auth()->user()->tenant_id || $request->tenant_id == auth()->user()->tenant_id) {
+            $receiver = new Receiver;
+            $receiver->fill($request->only(['email', 'tenant_id']));
+            $receiver->save();
+            session()->flash('flashSuccess', '引き続き受信対象ドメインを設定してください');
+        } else {
+            session()->flash('flashFailure', 'アクセス権がありません');
+        }
         return redirect()->route('receiver.edit', $receiver->id);
     }
 
@@ -80,6 +95,10 @@ class ReceiverController extends Controller
             session()->flash('flashFailure', '受信者が定義されていません');
             return redirect()->route('receiver.index');
         }
+        if (auth()->user()->tenant_id && auth()->user()->tenant_id != $receiver->tenant_id) {
+            session()->flash('flashFailure', 'アクセス権がありません');
+            return redirect()->route('receiver.index');
+        }
         $domains = Domain::where('tenant_id', $receiver->tenant_id)->get();
         return view('receivers.edit')->with(compact('receiver', 'domains'));
     }
@@ -97,6 +116,10 @@ class ReceiverController extends Controller
         $receiver = Receiver::find($id);
         if (!$receiver) {
             session()->flash('flashFailure', '受信者が定義されていません');
+            return redirect()->route('receiver.index');
+        }
+        if (auth()->user()->tenant_id && auth()->user()->tenant_id != $request->tenant_id) {
+            session()->flash('flashFailure', 'アクセス権がありません');
             return redirect()->route('receiver.index');
         }
         $receiver->fill($request->only(['email']));

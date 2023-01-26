@@ -1,9 +1,9 @@
 @extends('adminlte::page')
 
-@section('title', '親子関係')
+@section('title', '構成情報')
 
 @section('content_header')
-    <h1 class="m-0 text-dark">親子関係</h1>
+    <h1 class="m-0 text-dark">構成情報</h1>
 @stop
 
 @section('content')
@@ -15,16 +15,20 @@
                         <tr>
                             <th>子番号</th>
                             <th>名称</th>
-                            <th>更新日時</th>
+                            <th></th>
                         </tr>
-                        @foreach ($children as $child)
+                        @foreach ($graphs as $graph)
+                        <?php $child = $graph->child; ?>
                         <tr>
-                            <td>{{ $child->child_id }}</td>
-                            <td>{{ $child->childModule->name }}</td>
-                            <td>{{ $child->created_at }}</td>
+                            <td>{{ $child->id }}</td>
+                            <td>{{ $child->name }}</td>
+                            <td><a href="{{ route('module.sha_history', ['id' => $child->id ]) }}">改変履歴</a></td>
                         </tr>
                         @endforeach
                     </table>
+                </div>
+                <div class="card-footer">
+                  {{ $graphs->links() }}
                 </div>
             </div>
         </div>

@@ -30,6 +30,18 @@
                             @error ('password')<small class="text-muted">{{ $message }}</small>@enderror
                         </div>
 
+@empty(auth()->user()->tenant_id)
+                        <div class="form-group">
+                            <label for="tenant_id">テナント</label>
+                            <select name="tenant_id" id="tenant_id">
+@foreach ($tenants as $tenant)
+                                <option value="{{ $tenant->id }}">{{ $tenant->name }}</option>
+@endforeach
+                            </select>
+                            @error ('tenant_id')<small class="text-muted">{{ $message }}</small>@enderror
+                        </div>
+@endempty
+
                         <button type="submit" class="btn btn-primary">作成</button>
                     </form>
                 </div>

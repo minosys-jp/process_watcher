@@ -18,15 +18,7 @@ class GraphsTableSeeder extends Seeder
         //
         Graph::create([
             'parent_id' => 1,
-            'parent_version' => 1,
-            'child_id' => 3,
-            'child_version' => 1,
-        ]);
-        Graph::create([
-            'parent_id' => 2,
-            'parent_version' => 2,
-            'child_id' => 3,
-            'child_version' => 1,
+            'child_id' => 2,
         ]);
     }
 }

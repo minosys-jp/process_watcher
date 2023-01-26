@@ -8,23 +8,37 @@ use App\Models\Hostname;
 use App\Models\ProgramModule;
 use App\Models\Graph;
 use App\Models\FingerPrint;
+use App\Models\ModuleLog;
 
 class ProgramModuleController extends Controller
 {
     //
+    public function index($hostid) {
+        $modules = ProgramModule::select('program_modules.*')
+            ->where('hostname_id', $hostid)
+            ->join('graphs g', 'g.parent_id', 'program_modules.id')
+            ->distinct()
+            ->get();
+        if (!$modules) {
+            abort(404);
+        }
+        $host = Hostname::find($hostid);
+        if (!$host) {
+            abort(404);
+        }
+        if (!auth()->user()->tenant_id || $host->domain->tenant_id != auth()->user()->tenant_id) {
+            abort(404);
+        }
+        return view('modules.index')->with(compact('modules'));
+    }
+
     public function sha_history($modid) {
-        $shas = FingerPrint::select('finger_prints.id', 'pm.name', 'pm.status', 'finger_prints.version', 'finger_print', 'finger_prints.created_at')
-            ->join('program_modules as pm', function($qq) {
-                return $qq->on('pm.id', 'finger_prints.program_module_id');
-            })
-            ->join('program_modules as pm2', function($qq) {
-                return $qq->on('pm.hostname_id', 'pm2.hostname_id')
-                    ->on('pm.name', 'pm2.name');
-            })
-            ->where('pm2.id', $modid)
-            ->orderBy('finger_prints.id', 'desc')
-            ->paginate(50);
-        $module = ProgramModule::find($modid);
+        $shas = FingerPrint::select('finger_prints.*', 'module_logs.status')
+              ->leftJoin('module_logs ml', 'finger_prints.id', 'ml.finger_print_id')
+              ->where('finger_prints.program_module_id', $modid)
+              ->orderBy('finger_prints.id')
+              ->paginate(50);
+
         return view('modules.sha_history')->with(compact('shas', 'module'));
     }
 
@@ -33,52 +47,32 @@ class ProgramModuleController extends Controller
         if (!$pm) {
             abort(404);
         }
-        $pm->status = $req->status;
-        $pm->save();
+        $logOld = $pm->getLatestLogId();
+
+        // 新規にログを作成する
+        $log = new ModuleLog;
+        $log->status = $req->status;
+        $log->save();
         session()->flash('flashSuccess', '状態を更新しました');
-        return redirect()->route('module.sha_history', $pm->id);
+        return redirect()->route('module.sha_history', $modid);
     }
 
     public function graph_history($modid) {
-        $module = ProgramModule::find($modid);
-        $parents = Graph::select('parent_id', DB::raw('min(child_id)'), 'graphs.created_at')
-            ->join('program_modules as pm2', function($qq) {
-                return $qq->on('pm2.id', 'parent_id');
-            })
-            ->where('pm2.hostname_id', $module->hostname_id)
-            ->where('pm2.name', $module->name)
-            ->groupBy(['parent_id', 'graphs.created_at'])
-            ->orderBy('parent_id', 'desc')
+        $mlogs = ModuleLog::select('module_logs.*')
+            ->join('graph_module_logs gm', 'gm.module_log_id', 'module_logs.id')
+            ->join('graphs g', 'g.id', 'gm.graph_id')
+            ->where('graphs.parent_id', $modid)
+            ->orderBy('module_logs.id', 'desc')
             ->paginate(50);
-        return view('modules.graph_history')->with(compact('parents'));
+        return view('modules.graph_history')->with(compact('mlogs'));
     }
 
-    public function child_history($parentid) {
-        $children = Graph::select('child_id', 'child_version', 'created_at')
-            ->where('parent_id', $parentid)
-            ->get();
-        return view('modules.child_history')->with(compact('children'));
-    }
-
-    public function dll_history($dllid) {
-        $module = ProgramModule::find($dllid);
-        $children = Graph::select('child_id', DB::raw('max(child_version) as child_version'), 'graphs.created_at')
-            ->join('program_modules as pm2', function($qq) {
-                return $qq->on('pm2.id', 'parent_id');
-            })
-            ->where('pm2.hostname_id', $module->hostname_id)
-            ->where('pm2.name', $module->name)
-            ->groupBy(['child_id', 'graphs.created_at'])
-            ->orderBy('graphs.id', 'desc')
-            ->distinct()
-            ->get();
-        return view('modules.dll_history')->with(compact('children'));
-    }
-
-    public function exe_history($dllid) {
-        $parents = Graph::select('parent_id', 'parent_version', 'created_at')
-            ->where('child_id', $dllid)
-            ->get();
-        return view('modules.exe_history')->with(compact('parents'));
+    public function child_history($mlogid) {
+        $graphs = Graph::select('graphs.*')
+                ->join('graph_module_log gm', 'gm.graph_id', 'graphs.id')
+                ->join('module_logs ml', 'ml.id', 'gm.module_log')
+                ->where('ml.id', $mlogid)
+                ->paginate(50);
+        return view('modules.child_history')->with(compact('graphs'));
     }
 }

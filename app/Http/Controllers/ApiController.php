@@ -9,12 +9,13 @@ use App\Models\Tenant;
 use App\Models\Domain;
 use App\Models\Hostname;
 use App\Models\ProgramModule;
-use App\Models\FingerPrint;
 use App\Models\Graph;
 use App\Models\Configure;
-use App\Models\DiscordNotify;
+use App\Models\ModuleLog;
+use App\Models\FingerPrint;
 use GuzzleHttp\Client;
 use Carbon\Carbon;
+
 class ApiController extends Controller
 {
     private $discord_queue = [];
@@ -28,7 +29,6 @@ class ApiController extends Controller
         $host_code = $request->hostname;
         $fingers = $request->fingers;
         $graphs = $request->graphs;
-        $type_id = DiscordNotify::TYPE_UPDATE;
         $xtable1 = [];
         $xtable2 = [];
 	Log::debug("tenant:" . $tenant_code . ",domain:" . $domain_code . ",host:" . $host_code);
@@ -72,25 +72,14 @@ class ApiController extends Controller
             if ($fingers && is_array($fingers)) {
 Log::debug("fingers:" . count($fingers));
                 foreach ($fingers as $finger) {
-                    if (!array_key_exists('dbid', $finger) || !array_key_exists('name', $finger) || !array_key_exists('finger', $finger) || !array_key_exists('status', $finger)) {
+                    if (!array_key_exists('dbid', $finger) || !array_key_exists('name', $finger) || !array_key_exists('finger', $finger)) {
                         continue;
                     }
 
-                    $type_id = DiscordNotify::TYPE_UPDATE;
                     $fpid = $this->updateFingerPrint($finger, $hostname);
-                    if ($fpid !== FALSE) {
+                    if ($fpid) {
                         $xtable1[$fpid] = $finger['dbid'];
                         $xtable2[$finger['dbid']] = $fpid;
-                    }
-                    if ($fpid !== FALSE && $finger['status'] !== 2) {
-                        // discord notifier
-                        $db = new DiscordNotify;
-                        $db->tenant_id = $tenant->id;
-                        $db->domain_id = $domain->id;
-                        $db->hostname_id = $hostname->id;
-                        $db->type_id = $type_id;
-                        $db->finger_print_id = $fpid;
-                        $db->save();
                     }
                 }
             }
@@ -110,60 +99,9 @@ Log::debug("graphs:" . count($graphs));
                         Log::error("missing " . $exe);
                         continue;
                     }
-                    foreach ($dlls as $dll) {
-                        $module_dll = $this->loadModule($cache, $dll, $hostname->id, $xtable2);
-                        if (!$module_dll) {
-                            Log::error("missing " . $module_dll);
-                            continue;
-                        }
-                        $ograph = new Graph;
-                        $ograph->parent_id = $module_exe->id;
-                        $ograph->parent_version = $module_exe->version;
-                        $ograph->child_id = $module_dll->id;
-                        $ograph->child_version = $module_dll->version;
-                        $ograph->save();
-
-                        // discord notifies
-                        $db = new DiscordNotify;
-                        $db->tenant_id = $tenant->id;
-                        $db->domain_id = $domain->id;
-                        $db->hostname_id = $hostname->id;
-                        $db->type_id = DiscordNotify::TYPE_UPDATE;
-                        $db->graph_id = $ograph->id;
-                        $db->save();
-                    }
+                    $this->updateGraph($cache, $module_exe, $dlls, $xtable2);
                 }
             }
-
-            // black list の抽出
-            $blist = ProgramModule::where('status', ProgramModule::FLG_BLACK)
-                ->where('hostname_id', $hostname->id)
-                ->where('notified', 0)
-                ->pluck('id')
-                ->toArray();
-            $blist = array_map(function($e) use ($xtable1) {
-                if (array_key_exists($e, $xtable1)) {
-                    return $xtable1[$e];
-                }
-                return FALSE;
-            }, $blist);
-            $blist = array_filter(function($e) { return $e !== FALSE }, $blist);
-            $rVal['black'] =$blist;
-
-            // white list の抽出
-            $wlist0 = ProgramModule::where('status', ProgramModule::FLG_WHITE)
-                ->where('hostname_id', $hostname->id)
-                ->where('notified', 0)
-                ->pluck('id')
-                ->toArray();
-            $wlist = array_map(function($e) use ($xtable1) {
-                if (array_key_exists($e, $xtable1)) {
-                    return $xtable1[$e];
-                }
-                return FALSE;
-            }, $wlist);
-            $wlist = array_filter(function($e) { return $e !== FALSE }, $wlist);
-            $rVal['white'] =$wlist;
 
             // black process の強制終了
             $nKillBlackProc = Configure::select('cnum')
@@ -178,16 +116,8 @@ Log::debug("graphs:" . count($graphs));
                     ->where('ckey', 'kill_black_processes')
                     ->first();
             }
-            if ($nKillBlackProc !== null) {
-                $rVal['kill_black_processes'] = $nKillBlackProc->cnum;
-            }
-            if (count($blist) > 0) {
-                $blist = array_map(function($e) use ($xtable2) { return $xtable2[$e]; }, $blist);
-                ProgramModule::whereIn('id', $blist)->update(['notified' => 1]);
-            }
-            if (count($wlist) > 0) {
-                $wlist = array_map(function($e) use ($xtable2) { return $xtable2[$e]; }, $wlist);
-                ProgramModule::whereIn('id', $wlist)->update(['notified' => 1]);
+            if ($nKillBlackProc !== null && $nKillBlackProc->cnum) {
+                $rVal['kill_black_processes'] = $this->getBlack2($xtable1);
             }
 
             DB::commit();
@@ -200,42 +130,101 @@ Log::debug("graphs:" . count($graphs));
         return response()->json([ true, $rVal ]);
     }
 
+    // finger print の検出と更新
     private function updateFingerPrint($finger, $hostname) {
         $fprints = null;
-        $proc = ProgramModule::where('name', $finger['name'])
-            ->where('hostname_id', $hostname->id)
+        $proc = ProgramModule::select('program_modules.*', 'finger_prints.finger_print', 'finger_prints.id as fp_id')
+            ->join('finger_prints', 'finger_prints.program_module_id', 'program_modules.id')
+            ->where('program_modules.name', $finger['name'])
+            ->where('program_modules.hostname_id', $hostname->id)
+            ->whereNull('finger_prints.next_id')
             ->first();
         if ($proc) {
-            $fprints = FingerPrint::where('program_module_id', $proc->id)
-                ->where('version', $proc->version)
-                ->first();
+            if ($proc->finger_print === $finger['finger']) {
+                return $proc->fp_id;
+            }
+            $finger = new FingerPrint;
+            $finger->program_module_id = $proc->id;
+            $finger->finger_print = $finger['finger'];
+            $finger->save();
+            $status = ModuleLog::FLG_GRAY;
+            $fingerOld = null;
+            // 新しい Module Log は FLG_GRAY
+            if ($proc->fp_id) {
+                $fingerOld = FingerPrint::find($proc->fp_id);
+                $status = $fingerOld->program_module()->getStatus();
+                $fingerOld->next_id = $finger->id;
+                $fingerOld->save();
+            }
+
+            // finger print の新規登録
+            $status = ($status === ModuleLog::FLG_WHITE) ? ModuleLog::FLG_BLACK1 : $status;
+            $mlogNew = new ModuleLog;
+            $mlogNew->program_module_id = $proc->id;
+            $mlogNew->status = $status;
+            $mlogNew->finger_print_id = $finger->id;
+            $mlogNew->save();
+            return $finger->id;
         }
-        if (!$fprints || $fprints->finger_print !== $finger['finger']) {
-		if (!$finger['finger']) {
-            Log::error("finger missing:" . $finger['name']);
-            return FALSE;
-        }
-        if ($proc) {
-            $proc->version += 1;
-        } else {
-            $proc = new ProgramModule;
-            $proc->name = $finger['name'];
-            $proc->hostname_id = $hostname->id;
-            $proc->version = 1;
-            $type_id = DiscordNotify::TYPE_NEW;
-        }
-        $proc->status = $finger['status'];
+
+        $proc = new ProgramModule;
+        $proc->name = $finger['name'];
+        $proc->hostname_id = $hostname->id;
         $proc->save();
 
-        $fprints = new FingerPrint;
-        $fprints->program_module_id = $proc->id;
-        $fprints->version = $proc->version;
-        $fprints->finger_print = $finger['finger'];
-        $fprints->save();
-        return $fprints->id;
+        $finger = new FingerPrint;
+        $finger->program_module_id = $proc->id;
+        $finger->finger_print = $finger['finger'];
+        $finger->save();
+
+        $mlog = new ModuleLog;
+        $mlog->finger_print_id = $finger->id;
+        $mlog->save();
+
+        return $finger->id;
     }
-    return FALSE;
-}
+
+    // graph の検出と更新
+    private function updateGraph(&$cache, $exe, $dlls, $xtable2) {
+        $logid = ModuleLog::leftJoin('graph_module_log gm', 'gm.module_log_id', 'module_logs.id')
+            ->leftJoin('graphs g', 'g.id', 'gm.graph_id')
+            ->leftJoin('program_modules p0', 'p0.id', 'g.program_module_id')
+            ->leftJoin('program_modules p1', 'p1.id', 'g.program_module_id')
+            ->where('p0.id', $exe->id)
+            ->where('p1.id', $exe->id)
+            ->max('module_logs.id');
+        if ($logid) {
+            $graphsOld = ModuleLog::find($logid()->graphs()->pluck('graphs.id');
+        } else {
+            $graphsOld = collect([]);
+        }
+        $status = $exe->getStatus();
+        $bChanged = FALSE;
+        $graphs = [];
+        foreach ($dlls as $dll_id) {
+            $dll = $this->loadModule($cache, $dll_id, $xtable2);
+            if (!$dll) {
+                continue;
+            }
+            $oGraph = Graph::where('parent_id', $exe->id)
+                    ->where('child_id', $dll->id)->first();
+            if (!$oGraph) {
+                $oGraph = new Graph;
+                $oGraph->parent_id = $exe->id;
+                $oGraph->child_id = $dll->id;
+                $oGraph->save();
+            }
+            $graphs[] = $oGraph->id;
+        }
+
+        // 差集合が空集合でない場合は新たな ModuleLog を作成する
+        if ($graphsOld->diff($graphs)->count() > 0) {
+            $mlog = new ModuleLog;
+            $mlog->status = ($status == ModuleLog::FLG_WHITE ? ModuleLog::FLG_BLACK1 : $status);
+            $mlog->save();
+            $mlog->graphs()->sync($graphs);
+        }
+    }
 
     private function loadModule(&$cache, int $modid, int $hid, $xtable2) {
         if (isset($cache[$hid][$modid])) {
@@ -248,5 +237,12 @@ Log::debug("graphs:" . count($graphs));
             ->first();
         $cache[$hid][$modname] = $pmod;
         return $pmod;
+    }
+
+    // BLACK2 に分類されている id を返す
+    private function getBlack2($xtable1) {
+        $blacks = ModuleLog::where('status', ModuleLog::FLG_BLACK2)->pluck('program_module_id')->toArray();
+        $black_ids = array_map(function($d) use ($xtable1) { return $xtable1[$d]; }, array_filter(function($d) use ($xtable1) { return in_array($d, $xtable1); }, $blacks);
+        return $black_ids;
     }
 }

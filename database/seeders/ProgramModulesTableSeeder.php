@@ -20,22 +20,11 @@ class ProgramModulesTableSeeder extends Seeder
             'id' => 1,
             'hostname_id' => 1,
             'name' => "C:\\Skyster\\ProcessWacher\\process_watcher.exe",
-            'version' => 1,
-            'status' => 2,
         ]);
         ProgramModule::create([
             'id' => 2,
             'hostname_id' => 1,
-            'name' => "C:\\Skyster\\ProcessWacher\\process_watcher.exe",
-            'version' => 2,
-            'status' => 2,
-        ]);
-        ProgramModule::create([
-            'id' => 3,
-            'hostname_id' => 1,
             'name' => "C:\\Skyster\\ProcessWacher\\sqlite3.dll",
-            'version' => 1,
-            'status' => 2,
         ]);
     }
 }

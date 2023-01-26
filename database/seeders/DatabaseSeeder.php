@@ -27,5 +27,6 @@ class DatabaseSeeder extends Seeder
         $this->call(ProgramModulesTableSeeder::class);
         $this->call(FingerPrintsTableSeeder::class);
         $this->call(GraphsTableSeeder::class);
+        $this->call(ModuleLogsTableSeeder::class);
     }
 }

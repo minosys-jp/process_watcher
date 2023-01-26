@@ -13,10 +13,14 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('program_modules', function (Blueprint $table) {
+        Schema::create('menus', function (Blueprint $table) {
             $table->id();
-            $table->string('name', 1024)->index()->comment('プロセス名');
-            $table->unsignedBigInteger('hostname_id')->comment('ホストID');
+            $table->tinyInteger('flg_admin')->default(0)->comment('ADMIN なら1');
+            $table->string('title', 1024)->comment('タイトル');
+            $table->string('icon', 1024)->nullable(true)->comment('icon html');
+            $table->string('link', 1024)->nullable(true)->comment('リンク先 URL');
+            $table->unsignedBigInteger('parent_id')->nullable(true)->comment('親 メニュー ID');
+            $table->integer('sort_number')->default(0)->index()->comment('表示順序');
             $table->datetime('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
             $table->datetime('updated_at')->default(DB::raw('CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP'));
         });
@@ -29,6 +33,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('program_modules');
+        Schema::dropIfExists('menus');
     }
 };

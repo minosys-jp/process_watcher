@@ -45,12 +45,11 @@ Route::group(['middleware' => ['auth']], function() {
     Route::get('/hostname/{hostname}/show', [HostnameController::class, 'show'])->name('hostname.show');
     Route::get('/hostname/{hostname}/edit', [HostnameController::class, 'edit'])->name('hostname.edit');
     Route::put('/hostname/{hostname}', [HostnameController::class, 'update'])->name('hostname.update');
+    Route::get('/hostname/{hostname}/module', [ProgramModuleController::class, 'index'])->name('module.index');
     Route::get('/module/{module}/sha_history', [ProgramModuleController::class, 'sha_history'])->name('module.sha_history');
     Route::put('/module/{module}/sha_history', [ProgramModuleController::class, 'change_status'])->name('module.sha_history');
     Route::get('/module/{module}/graph_history', [ProgramModuleController::class, 'graph_history'])->name('module.graph_history');
-    Route::get('/module/{module}/child_history', [ProgramModuleController::class, 'child_history'])->name('module.child_history');
-    Route::get('/module/{module}/dll_history', [ProgramModuleController::class, 'dll_history'])->name('module.dll_history');
-    Route::get('/module/{module}/exe_history', [ProgramModuleController::class, 'exe_history'])->name('module.exe_history');
+    Route::get('/module/{mlog}/child_history', [ProgramModuleController::class, 'child_history'])->name('module.child_history');
     Route::get('/config', [ConfigureController::class, 'index'])->name('config.index');
     Route::get('/config/{tenant}/create', [ConfigureController::class, 'create'])->name('config.create');
     Route::post('/config/{tenant}', [ConfigureController::class, 'store'])->name('config.store');
