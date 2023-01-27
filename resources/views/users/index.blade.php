@@ -14,6 +14,7 @@
                     <table class="table">
                         <tr>
                             <th>番号</th>
+                            <th>テナント</th>
                             <th>Email</th>
                             <th>名前</th>
                             <th>操作</th>
@@ -21,6 +22,7 @@
                         @foreach ($users as $user)
                         <tr>
                             <td>{{ $user->id }}</td>
+                            <td>{{ $user->tenant_id ? $user->tenant->name : 'スーパー管理者' }}</td>
                             <td>{{ $user->email }}</td>
                             <td>{{ $user->name }}</td>
                             <td>

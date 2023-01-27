@@ -40,7 +40,6 @@ Route::group(['middleware' => ['auth']], function() {
     Route::resource('/user', UserController::class);
     Route::resource('/tenant', TenantController::class);
     Route::resource('/domain', DomainController::class);
-    Route::resource('/receiver', ReceiverController::class);
     Route::get('/domain/{domain}/hostname', [HostnameController::class, 'index'])->name('hostname.index');
     Route::get('/hostname/{hostname}', [HostnameController::class, 'index'])->name('hostname.index');
     Route::get('/hostname/{hostname}/show', [HostnameController::class, 'show'])->name('hostname.show');
