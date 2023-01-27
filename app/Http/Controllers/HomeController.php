@@ -25,7 +25,8 @@ class HomeController extends Controller
      */
     public function index()
     {
-        $tenants = Tenant::all();
+        $tenants = auth()->user()->tenant_id ? Tenant::all() : Tenant::where('id', auth()->user()->tenant_id)->get();
+
         $mtenants = [];
         foreach ($tenants as $tenant) {
             $mlog_f = ModuleLog::select('module_logs.id')
