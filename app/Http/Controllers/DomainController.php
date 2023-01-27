@@ -21,7 +21,7 @@ class DomainController extends Controller
             $vars['tenant'] = Tenant::find($tenant_id);
             $vars['domains'] = Domain::where('tenant_id', $tenant_id)->paginate(50)->appends(['tenant' => $tenant_id]);
         }
-        $vars['tenants'] = auth()->user()->tenant_id ? Tenant::where('id', $tenant_id : Tenant::get();
+        $vars['tenants'] = auth()->user()->tenant_id ? Tenant::where('id', $tenant_id) : Tenant::get();
         return view('domains.index')->with($vars);
     }
 
