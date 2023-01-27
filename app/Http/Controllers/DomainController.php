@@ -16,11 +16,12 @@ class DomainController extends Controller
     public function index(Request $request)
     {
         $vars = [];
-        if ($request->has('tenant')) {
-            $vars['tenant'] = Tenant::find($request->tenant);
-            $vars['domains'] = Domain::where('tenant_id', $request->tenant)->paginate(50)->appends(['tenant' => $request->tenant]);
+        $tenant_id = auth()->user()->tenant_id ?? $request->tenant;
+        if ($tenant_id) {
+            $vars['tenant'] = Tenant::find($tenant_id);
+            $vars['domains'] = Domain::where('tenant_id', $tenant_id)->paginate(50)->appends(['tenant' => $tenant_id]);
         }
-        $vars['tenants'] = Tenant::get();
+        $vars['tenants'] = auth()->user()->tenant_id ? Tenant::where('id', $tenant_id : Tenant::get();
         return view('domains.index')->with($vars);
     }
 
@@ -32,7 +33,7 @@ class DomainController extends Controller
     public function create()
     {
         //
-        $tenants = Tenant::get();
+        $tenants = auth()->user()->tenant_id ? Tenant::where('id', auth()->user()->tenant_id)->get() : Tenant::get();
         return view('domains.create')->with(compact('tenants'));
     }
 
@@ -46,6 +47,7 @@ class DomainController extends Controller
     {
         //
         $domain = new Domain;
+        $request->tenant = auth()->user()->tenant_id ?? $request->tenant;
         $domain->fill($request->all());
         $domain->save();
         return redirect()->route('domain.edit', $domain->id);
@@ -77,6 +79,9 @@ class DomainController extends Controller
             session()->flash('flashFailure', 'ドメインが定義されていません');
             return redirect()->route('domain.index');
         }
+        if (auth()->user()->tenant_id && $domain->tenant_id != auth()->user()->tenant_id) {
+            abort(404);
+        }
         return view('domains.edit')->with(compact('domain'));
     }
 
@@ -95,6 +100,9 @@ class DomainController extends Controller
             session()->flash('flashFailure', 'ドメインが定義されていません');
             return redirect()->route('domain.index');
         }
+        if (auth()->user()->tenant_id && $domain->tenant_id != auth()->user()->tenant_id) {
+            abort(404);
+        }
         $domain->fill($request->only(['code', 'name']));
         $domain->save();
         session()->flash('flashSuccess', 'ドメインを更新しました');
@@ -111,7 +119,7 @@ class DomainController extends Controller
     {
         //
         $domain = Domain::find($id);
-        if ($domain) {
+        if ($domain && (!auth()->user()->tenant_id || $domain->tenant_id == auth()->user()->tenant_id)) {
             $domain->receivers()->sync();
             $domain->delete();
         }

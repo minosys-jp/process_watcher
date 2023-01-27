@@ -17,7 +17,11 @@ class TenantController extends Controller
     public function index()
     {
         //
-        $tenants = Tenant::paginate(50);
+        if (auth()->user()->tenant_id) {
+            $tenants = Tenant::where('id', auth()->user()->tenant_id)->paginate(50);
+        } else {
+            $tenants = Tenant::paginate(50);
+        }
         return view('tenants.index')->with(compact('tenants'));
     }
 
@@ -29,6 +33,9 @@ class TenantController extends Controller
     public function create()
     {
         //
+        if (auth()->user()->tenant_id) {
+            abort(404);
+        }
         return view('tenants.create');
     }
 
@@ -41,6 +48,10 @@ class TenantController extends Controller
     public function store(Request $request)
     {
         //
+        if (auth()->user()->tenant_id) {
+            session()->flash('flashFailure', 'アクセス権がありません');
+            return redirect()->route('tenants.index');
+        }
         $request->validate([
             'code' => 'required',
             'name' => 'required',
@@ -74,6 +85,9 @@ class TenantController extends Controller
     public function edit($id)
     {
         //
+        if (auth()->user()->tenant_id && auth()->user()->tenant_id != $id) {
+            abort(404);
+        }
         $tenant = Tenant::find($id);
         if (!$tenant) {
             session()->flash('flashFailure', 'テナントが定義されていません');
@@ -92,6 +106,10 @@ class TenantController extends Controller
     public function update(Request $request, $id)
     {
         //
+        if (auth()->user()->tenant_id && auth()->user()->tenant_id != $id) {
+            session()->flash('flashFailure', 'アクセス権がありません');
+            return redirect()->route('tenants.index');
+        }
         $tenant = Tenant::find($id);
         if (!$tenant) {
             session()->flash('flashFailure', 'テナントが定義されていません');

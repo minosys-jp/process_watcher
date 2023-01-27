@@ -21,7 +21,7 @@ class ReceiverController extends Controller
         if (auth()->user()->tenant_id) {
             $tenant_id = auth()->user()->tenant_id;
             $vars['tenant'] = Tenant::find($tenant_id);
-            $vars['receivers'] = Receiver::where('tenant_id', $request->tenant)->paginate(50)->appends(['tenant' => $request->tenant]);
+            $vars['receivers'] = Receiver::where('tenant_id', $tenant_id)->paginate(50)->appends(['tenant' => $tenant_id]);
             $vars['tenants'] = Tenant::where('id', $tenant_id)->get();
         } else if ($request->has('tenant')) {
             $vars['tenant'] = Tenant::find($request->tenant);
