@@ -49,7 +49,7 @@ class UserController extends Controller
         $user = new User;
         $user->fill($request->only('email', 'name'));
         $user->password = Hash::make($request->password);
-        $user->tenant_id = auth()->user()->tenant_id;
+        $user->tenant_id = auth()->user()->tenant_id ?? $request->tenant_id;
         $user->flg_admin = empty($user->tenant_id);
         $user->save();
         session()->flash('flashSuccess', '管理者を作成しました');

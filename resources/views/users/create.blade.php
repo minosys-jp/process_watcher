@@ -34,6 +34,9 @@
                         <div class="form-group">
                             <label for="tenant_id">テナント</label>
                             <select name="tenant_id" id="tenant_id">
+@empty (auth()->user()->tenant_id)
+                                <option value="">スーパー管理者</option>
+@endempty
 @foreach ($tenants as $tenant)
                                 <option value="{{ $tenant->id }}">{{ $tenant->name }}</option>
 @endforeach
