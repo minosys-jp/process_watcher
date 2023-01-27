@@ -91,40 +91,16 @@ class MenusTableSeeder extends Seeder
         Menu::create([
             'id' => 10,
             'flg_admin' => 0,
-            'title' => '受信者',
-            'icon' => 'fas fa-fw fa-user-friends',
+            'title' => '設定パラメータ',
+            'icon' => 'fas fa-fw fa-file',
             'sort_number' => 1000,
         ]);
         Menu::create([
             'id' => 11,
             'flg_admin' => 0,
             'title' => '一覧',
-            'link' => '/receiver',
-            'parent_id' => 10,
-            'sort_number' => 1100,
-        ]);
-        Menu::create([
-            'id' => 12,
-            'flg_admin' => 0,
-            'title' => '作成',
-            'link' => '/receiver/create',
-            'parent_id' => 10,
-            'sort_number' => 1200,
-        ]);
-
-        Menu::create([
-            'id' => 13,
-            'flg_admin' => 0,
-            'title' => '設定パラメータ',
-            'icon' => 'fas fa-fw fa-file',
-            'sort_number' => 1300,
-        ]);
-        Menu::create([
-            'id' => 14,
-            'flg_admin' => 0,
-            'title' => '一覧',
             'link' => '/config',
-            'parent_id' => 13,
+            'parent_id' => 10,
             'sort_number' => 1100,
         ]);
     }
