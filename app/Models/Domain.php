@@ -17,7 +17,7 @@ class Domain extends Model
         'updated_at' => 'datetime:Y-m-d',
     ];
 
-    public function receivers() {
-        return $this->beglongsToMany(Receiver::class);
+    public function tenant() {
+        return $this->belongsTo(Tenant::class);
     }
 }

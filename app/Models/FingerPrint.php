@@ -21,6 +21,10 @@ class FingerPrint extends Model
         'updated_at' => 'datetime:Y-m-d',
     ];
 
+    public function program_module() {
+        return $this->belongsTo(ProgramModule::class);
+    }
+
     public function getStatus() {
         $mlog = ModuleLog::where('program_module_id', $this->program_module_id)
               ->whereNull('finger_print_id')

@@ -9,10 +9,10 @@ use App\Models\Configure;
 use App\Models\Tenant;
 use App\Models\Domain;
 use App\Models\Hostname;
-use App\Models\DiscordNotify;
 use App\Models\ProgramModule;
 use App\Models\Graph;
 use App\Models\FingerPrint;
+use App\Models\ModuleLog;
 use App\Mail\DiffNotifyMail;
 use GuzzleHttp\Client;
 use Carbon\Carbon;
@@ -36,7 +36,7 @@ class NotifyDiscord extends Command
     /**
      * notify to discord server
      */
-    private function notify2Discrd($last_updated, $next_update) {
+    private function notify2Discord($last_updated, $next_update) {
         $mlogs = ModuleLog::where('flg_discord', 0)->get();
         $discords = [];
         $hash = [];
@@ -76,13 +76,14 @@ class NotifyDiscord extends Command
                 if (!$url) {
                     continue;
                 }
+                $url = $url->cvalue;
                 $users = Configure::select('cvalue')
-                        ->where('tenant_id', $tid)->where('domain_id', $did)
+                        ->where('tenant_id', $t)->where('domain_id', $d)
                         ->where('ckey', 'discord_user')
                         ->pluck('cvalue')->toArray();
                 if (count($users) === 0) {
                     $users = Configure::select('cvalue')
-                        ->where('tenant_id', $tid)
+                        ->where('tenant_id', $t)
                         ->where('ckey', 'discord_user')
                         ->pluck('cvalue')->toArray();
                 }
@@ -146,7 +147,7 @@ class NotifyDiscord extends Command
             if (!array_key_exists($h->name, $hash[$t->id][$d->id])) {
                 $hash[$t->id][$d->id] = [ $h->name => [] ];
             }
-            $hash[$t->id][$d->id][$h->name] = $pm->name;
+            $hash[$t->id][$d->id][$h->name][] = $pm->name;
         }
 
         foreach ($hash as $tid => $domains) {
@@ -166,7 +167,7 @@ class NotifyDiscord extends Command
                 }
                 $to = implode(',', $to);
                 $dname = Domain::find($did)->name;
-                Mail::to($to)->send(new DiffNotifyMail($dname, $hosts));
+                \Mail::to($to)->send(new DiffNotifyMail($dname, $hosts));
                 usleep(10000);
             }
         }
@@ -190,15 +191,7 @@ class NotifyDiscord extends Command
             DB::beginTransaction();
             $this->notify2Discord($last_updated, $next_update);
             $this->notify2Email($last_updated, $next_update);
-            ModuleLog::where('flg_discord', 0)->update(['flg_discord', 1]);
-
-            // update last invocation datetime
-            if (!$last_update_config) {
-                $last_update_config = new Configure;
-                $last_update_config->ckey = 'next_update';
-            }
-            $last_update_config->cvalue = $next_update->format('Y-m-d H:i:s');
-            $last_update_config->save();
+            ModuleLog::where('flg_discord', 0)->update(['flg_discord' => 1]);
             DB::commit();
         } catch (\Exception $e) {
             Log::error($e);
