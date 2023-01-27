@@ -21,7 +21,7 @@ use App\Http\Controllers\ApiController;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('login');
 });
 
 Auth::routes();
@@ -34,8 +34,9 @@ Route::post('/register', function() {
     abort(404);
 });
 
-Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+
 Route::group(['middleware' => ['auth']], function() {
+    Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
     Route::resource('/user', UserController::class);
     Route::resource('/tenant', TenantController::class);
     Route::resource('/domain', DomainController::class);

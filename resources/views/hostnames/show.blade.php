@@ -38,7 +38,6 @@
                             <td>
                                 <a href="{{ route('module.sha_history', $module->id) }}"class="btn btn-success">更新履歴</a>
                                 <a href="{{ route('module.graph_history', $module->id) }}" class="btn btn-primary">親グラフ履歴</a>
-                                <a href="{{ route('module.dll_history', $module->id) }}" class="btn btn-warning">DLLグラフ履歴</a>
                         </tr>
                         @endforeach
                     </table>

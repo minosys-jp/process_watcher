@@ -25,8 +25,8 @@
                             <td class="@if ($status >= \App\Models\ModuleLog::FLG_BLACK1) red @endif ">{{ \App\Models\ModuleLog::FLG_NAMES[$status] }}</td>
                             <td>{{ $module->updated_at }}</td>
                             <td>
-                                <a class=="btn btn-primary" href="{{ route('module.sha_history', $module) }}">改変履歴</a>
-                                <a class=="btn btn-danger" href="{{ route('module.graph_history', $module) }}">DLL履歴</a>
+                                <a class="btn btn-primary" href="{{ route('module.sha_history', $module) }}">改変履歴</a>
+                                <a class="btn btn-danger" href="{{ route('module.graph_history', $module) }}">DLL履歴</a>
                         </tr>
                         @endforeach
                     </table>
@@ -40,8 +40,10 @@
 @stop
 
 @push('css')
+<style>
 .red {
     font-weight: bold;
     color: red;
 }
+</style>
 @endpush

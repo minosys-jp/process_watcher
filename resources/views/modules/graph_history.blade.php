@@ -21,7 +21,7 @@
                         @foreach ($mlogs as $mlog)
                         <tr>
                             <td>{{ $mlog->id }}</td>
-                            <td>{{ $mlog->groups()->count() }}</td>
+                            <td>{{ $mlog->graphs()->count() }}</td>
                             <td>{{ $mlog->created_at }}</td>
                             <td>
                                 <a href="{{ route('module.child_history', $mlog->id) }}" class="btn btn-primary">従属DLL群</a>
@@ -31,7 +31,7 @@
                     </table>
                 </div>
                 <div class="card-footer">
-                    {{ $parents->links() }}
+                    {{ $mlogs->links() }}
                 </div>
             </div>
         </div>

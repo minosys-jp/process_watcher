@@ -22,7 +22,7 @@
                         <tr>
                             <td>{{ $child->id }}</td>
                             <td>{{ $child->name }}</td>
-                            <td><a href="{{ route('module.sha_history', ['id' => $child->id ]) }}">改変履歴</a></td>
+                            <td><a class="btn btn-primary" href="{{ route('module.sha_history', $child) }}">改変履歴</a></td>
                         </tr>
                         @endforeach
                     </table>

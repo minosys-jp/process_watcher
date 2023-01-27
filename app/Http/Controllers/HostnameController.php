@@ -33,15 +33,9 @@ class HostnameController extends Controller
         if (!$hostname) {
             abort(404);
         }
-        $modules = ProgramModule::select('program_modules.*')
-            ->joinSub(ProgramModule::select('name', DB::raw('max(version) as version'))
-                    ->groupBy('name'), 'pm2', function($join) {
-                        $join->on('program_modules.name', 'pm2.name')
-                            ->on('program_modules.version', 'pm2.version');
-                    })
-            ->where('program_modules.hostname_id', $hid);
+        $modules = ProgramModule::where('hostname_id', $hid);
         if ($search) {
-            $modules = $modules->where('program_modules.name', 'like', "%$search%");
+            $modules = $modules->where('name', 'like', "%$search%");
         }
         $modules = $modules->paginate(50);
         return view('hostnames.show')->with(compact('hostname', 'modules', 'search'));

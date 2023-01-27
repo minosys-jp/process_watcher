@@ -17,28 +17,26 @@ class ModuleLogsTableSeeder extends Seeder
     {
         //
         ModuleLog::create([
-            'program_module_id' => 1,
+            'id' => 1,
             'status' => ModuleLog::FLG_WHITE,
             'finger_print_id' => 1,
-            'graph_id' => null,
         ]);
         ModuleLog::create([
-            'program_module_id' => 2,
+            'id' => 2,
             'status' => ModuleLog::FLG_WHITE,
             'finger_print_id' => 2,
-            'graph_id' => null,
         ]);
         ModuleLog::create([
-            'program_module_id' => 2,
+            'id' => 3,
             'status' => ModuleLog::FLG_WHITE,
             'finger_print_id' => null,
-            'graph_id' => 1,
         ]);
         ModuleLog::create([
-            'program_module_id' => 1,
+            'id' => 4,
             'status' => ModuleLog::FLG_BLACK1,
             'finger_print_id' => 3,
-            'graph_id' => null,
         ]);
+        $mlog = ModuleLog::find(3);
+        $mlog->graphs()->sync([1]);
     }
 }

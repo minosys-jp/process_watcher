@@ -6,6 +6,8 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
+use JeroenNoten\LaravelAdminLte\Events\BuildingMenu;
 use App\Models\Menu;
 
 class EventServiceProvider extends ServiceProvider
@@ -28,7 +30,7 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        Event::listen(BuildingMenu::class, function (BuildingMenu $event) {
+        Event::listen(function (BuildingMenu $event) {
             $pmenus = Menu::whereNull('parent_id');
             if (!auth()->user()->flg_admin) {
                 $pmenus = $pmenus->where('flg_admin', 0);
@@ -56,6 +58,7 @@ class EventServiceProvider extends ServiceProvider
                     if ($cmenu->link) {
                         $submenu['url'] = url($cmenu->link);
                     }                
+                    $submenus[] = $submenu;
                 }
                 if (count($submenus) > 0) {
                     $menu['submenu'] = $submenus;
@@ -63,7 +66,6 @@ class EventServiceProvider extends ServiceProvider
                 $event->menu->add($menu);
             }
         });
-        //
     }
 
     /**
