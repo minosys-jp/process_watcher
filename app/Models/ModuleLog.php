@@ -10,7 +10,7 @@ class ModuleLog extends Model
 {
     use HasFactory;
     protected $fillable = [
-         'status', 'finger_print_id', 'flg_noticed', 'flg_discord',
+         'status', 'finger_print_id', 'flg_discord',
     ];
 
     protected $casts = [
