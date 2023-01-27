@@ -25,7 +25,7 @@ class HomeController extends Controller
      */
     public function index()
     {
-        $tenants = auth()->user()->tenant_id ? Tenant::all() : Tenant::where('id', auth()->user()->tenant_id)->get();
+        $tenants = !auth()->user()->tenant_id ? Tenant::all() : Tenant::where('id', auth()->user()->tenant_id)->get();
 
         $mtenants = [];
         foreach ($tenants as $tenant) {
