@@ -25,7 +25,7 @@
                         <tr>
                             <th>番号</th>
                             <th>名称</th>
-                            <th>バージョン</th>
+                            <th>状態</th>
                             <th>最新更新日時</th>
                             <th>操作</th>
                         </tr>
@@ -33,7 +33,7 @@
                         <tr>
                             <td>{{ $module->id }}</td>
                             <td>{{ $module->name }}</td>
-                            <td>{{ $module->version }}</td>
+                            <td class="@if ($module->status >= \App\Models\ModuleLog::FLG_BLACK1) red @endif ">{{ \App\Models\ModuleLog::FLG_NAMES[$module->status] }}</td>
                             <td>{{ $module->updated_at }}</td>
                             <td>
                                 <a href="{{ route('module.sha_history', $module->id) }}"class="btn btn-success">更新履歴</a>
@@ -53,3 +53,12 @@
         </div>
     </div>
 @stop
+
+@push ('css')
+<style>
+.red {
+  font-weight: bold;
+  color: red;
+}
+</style>
+@endpush

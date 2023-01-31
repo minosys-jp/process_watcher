@@ -30,6 +30,7 @@
                             <th>番号</th>
                             <th>コード</th>
                             <th>名前</th>
+                            <th>状態</th>
                             <th>操作</th>
                         </tr>
                         @foreach ($domains as $domain)
@@ -37,6 +38,7 @@
                             <td>{{ $domain->id }}</td>
                             <td>{{ $domain->code }}</td>
                             <td>{{ $domain->name }}</td>
+                            <td class="@if ($domain->status >= \App\Models\ModuleLog::FLG_BLACK1) red @endif">{{ \App\Models\ModuleLog::FLG_NAMES[$domain->status] }}</td>
                             <td>
                               <a href="{{ route('hostname.index', $domain->id) }}" class="btn btn-success">ホスト一覧</a>
                               <a href="{{ route('domain.edit', $domain->id) }}" class="btn btn-primary">編集</a>
@@ -71,4 +73,13 @@ function remove(id) {
     form.submit();
 }
 </script>
+@endpush
+
+@push ('css')
+<style>
+.red {
+    font-weight: bold;
+    color: red;
+}
+</style>
 @endpush

@@ -15,6 +15,7 @@ class ProgramModuleController extends Controller
     //
     public function index($hostid) {
         $modules = ProgramModule::select('program_modules.*')
+            ->join('modules_logs', 'module_logs.id', 'sub.log_id')
             ->where('hostname_id', $hostid)
             ->join('graphs g', 'g.parent_id', 'program_modules.id')
             ->distinct()
@@ -22,6 +23,27 @@ class ProgramModuleController extends Controller
         if (!$modules) {
             abort(404);
         }
+        foreach ($modules as $pm) {
+            $fmid = ModuleLog::leftJoin('finger_prints as f', 'f.id', 'module_logs.finger_print_id')
+                  ->where('f.program_module_id', $pm->id)
+                  ->max('module_logs.id');
+            $pmid = ModuleLog::leftJoin('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
+                  ->leftJoin('graphs as g', 'g.id', 'gm.graph_id')
+                  ->where('g.parent_id', $pm->id)
+                  ->max('module_logs.id');
+            $cmid = ModuleLog::leftJoin('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
+                  ->leftJoin('graphs as g', 'g.id', 'gm.graph_id')
+                  ->where('g.child_id', $pm->id)
+                  ->max('module_logs.id');
+            $id = max($fmid, $pmid, $cmid);
+            if ($id) {
+                $status = ModuleLog::find($id)->status;
+            } else {
+                $status = ModuleLog::FLG_GRAY;
+            }
+            $pm->status = $status;
+        }
+
         $host = Hostname::find($hostid);
         if (!$host) {
             abort(404);
@@ -73,6 +95,19 @@ class ProgramModuleController extends Controller
                 ->join('module_logs as ml', 'ml.id', 'gm.module_log_id')
                 ->where('ml.id', $mlogid)
                 ->paginate(50);
+        foreach ($graphs as $g) {
+            $id = ModuleLog::join('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
+                ->join('graphs as g', 'g.id', 'gm.graph_id')
+                ->where('g.id', $g->id)
+                ->where('module_logs.id', '<=', $mlogid)
+                ->max('module_logs.id');
+            if ($id) {
+                $status = ModuleLog::find($id)->status;
+            } else {
+                $status = ModuleLog::FLG_GRAY;
+            }
+            $g->status = $status;
+        }
         return view('modules.child_history')->with(compact('graphs'));
     }
 }

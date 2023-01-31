@@ -8,6 +8,7 @@ use App\Models\Tenant;
 use App\Models\Domain;
 use App\Models\Hostname;
 use App\Models\ProgramModule;
+use App\Models\ModuleLog;
 
 class HostnameController extends Controller
 {
@@ -21,6 +22,32 @@ class HostnameController extends Controller
         //
         $domain = Domain::find($did);
         $hostnames = Hostname::where('domain_id', $did)->paginate(50);
+        foreach ($hostnames as $h) {
+            $fid = ModuleLog::leftJoin('finger_prints as f', 'f.id', 'module_logs.finger_print_id')
+                 ->leftJoin('program_modules as pm', 'pm.id', 'f.program_module_id')
+                 ->leftJoin('hostnames as h', 'h.id', 'pm.hostname_id')
+                 ->where('h.domain_id', $did)
+                 ->max('module_logs.id');
+            $pid = ModuleLog::leftJoin('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
+                 ->leftJoin('graphs as g', 'g.id', 'gm.graph_id')
+                 ->leftJoin('program_modules as pm', 'pm.id', 'g.parent_id')
+                 ->leftJoin('hostnames as h', 'h.id', 'pm.hostname_id')
+                 ->where('h.domain_id', $did)
+                 ->max('module_logs.id');
+            $cid = ModuleLog::leftJoin('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
+                 ->leftJoin('graphs as g', 'g.id', 'gm.graph_id')
+                 ->leftJoin('program_modules as pm', 'pm.id', 'g.child_id')
+                 ->leftJoin('hostnames as h', 'h.id', 'pm.hostname_id')
+                 ->where('h.domain_id', $did)
+                 ->max('module_logs.id');
+            $id = max($fid, $pid, $cid);
+            if ($id) {
+                $status = ModuleLog::find($id)->status;
+            } else {
+                $status = ModuleLog::FLG_GRAY;
+            }
+            $h->status = $status;
+        }
         return view('hostnames.index')->with(compact('hostnames'));
     }
 
@@ -33,11 +60,32 @@ class HostnameController extends Controller
         if (!$hostname) {
             abort(404);
         }
-        $modules = ProgramModule::where('hostname_id', $hid);
+        $modules = ProgramModule::select('program_modules.*')
+                 ->where('hostname_id', $hid);
         if ($search) {
             $modules = $modules->where('name', 'like', "%$search%");
         }
         $modules = $modules->paginate(50);
+        foreach ($modules as $pm) {
+            $f_mid = ModuleLog::leftJoin('finger_prints as f', 'f.id', 'module_logs.finger_print_id')
+              ->where('f.program_module_id', $pm->id)
+              ->max('module_logs.id');
+            $p_mid = ModuleLog::leftJoin('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
+                   ->leftJoin('graphs as g', 'g.id', 'gm.graph_id')
+                   ->where('g.parent_id', $pm->id)
+                   ->max('module_logs.id');
+            $c_mid = ModuleLog::leftJoin('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
+                   ->leftJoin('graphs as g', 'g.id', 'gm.graph_id')
+                   ->where('g.child_id', $pm->id)
+                   ->max('module_logs.id');
+            $id = max($f_mid, $p_mid, $c_mid);
+            if ($id) {
+                $status = ModuleLog::find($id)->status;
+            } else {
+                $status = ModuleLog::FLG_GRAY;
+            }
+            $pm->status = $status;
+        }
         return view('hostnames.show')->with(compact('hostname', 'modules', 'search'));
     }
 

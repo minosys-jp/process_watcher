@@ -14,6 +14,7 @@
                     <table class="table">
                         <tr>
                             <th>子番号</th>
+                            <th>状態</th>
                             <th>名称</th>
                             <th></th>
                         </tr>
@@ -21,6 +22,7 @@
                         <?php $child = $graph->child; ?>
                         <tr>
                             <td>{{ $child->id }}</td>
+                            <td class="@if ($graph->status >= \App\Models\ModuleLog::FLG_BLACK1) red @endif ">{{ \App\Models\ModuleLog::FLG_NAMES[$graph->status] }}</td>
                             <td>{{ $child->name }}</td>
                             <td><a class="btn btn-primary" href="{{ route('module.sha_history', $child) }}">改変履歴</a></td>
                         </tr>
@@ -34,3 +36,12 @@
         </div>
     </div>
 @stop
+
+@push ('css')
+<style>
+.red {
+    font-weight: bold;
+    color: red;
+}
+</style>
+@endpush

@@ -16,6 +16,7 @@
                             <th>番号</th>
                             <th>ホストコード</th>
                             <th>名称</th>
+                            <th>状態</th>
                             <th>操作</th>
                         </tr>
                         @foreach ($hostnames as $hostname)
@@ -23,6 +24,7 @@
                             <td>{{ $hostname->id }}</td>
                             <td>{{ $hostname->code }}</td>
                             <td>{{ $hostname->name }}</td>
+                            <td class="@if ($hostname->status >= \App\Models\ModuleLog::FLG_BLACK1) red @endif ">{{ \App\Models\ModuleLog::FLG_NAMES[$hostname->status] }}</td>
                             <td>
                                 <a href="{{ route('hostname.show', $hostname->id) }}" class="btn btn-success">モジュール一覧</a>
                                 <a href="{{ route('hostname.edit', $hostname->id) }}" class="btn btn-primary">編集</a>
@@ -37,3 +39,12 @@
         </div>
     </div>
 @stop
+
+@push ('css')
+<style>
+.red {
+    font-weight: bold;
+    color: red;
+}
+</style>
+@endpush
