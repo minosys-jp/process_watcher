@@ -49,6 +49,11 @@ class DomainController extends Controller
             }
         }
         $vars['tenants'] = auth()->user()->tenant_id ? Tenant::where('id', $tenant_id)->get() : Tenant::get();
+        $breads = [
+            'ホーム' => route('home'),
+	    'ドメイン一覧' => route('domain.index'),
+        ];
+	$vars['breads'] = $breads;
         return view('domains.index')->with($vars);
     }
 
@@ -61,7 +66,11 @@ class DomainController extends Controller
     {
         //
         $tenants = auth()->user()->tenant_id ? Tenant::where('id', auth()->user()->tenant_id)->get() : Tenant::get();
-        return view('domains.create')->with(compact('tenants'));
+        $breads = [
+            'ホーム' => route('home'),
+            'ドメイン作成' => route('domain.create'),
+        ];
+        return view('domains.create')->with(compact('tenants', 'breads'));
     }
 
     /**
@@ -109,7 +118,12 @@ class DomainController extends Controller
         if (auth()->user()->tenant_id && $domain->tenant_id != auth()->user()->tenant_id) {
             abort(404);
         }
-        return view('domains.edit')->with(compact('domain'));
+        $breads = [
+            'ホーム' => route('home'),
+	    'ドメイン一覧' => route('domain.index'),
+	    'ドメイン編集' => route('domain.edit', $id),
+        ];
+        return view('domains.edit')->with(compact('domain', 'breads'));
     }
 
     /**

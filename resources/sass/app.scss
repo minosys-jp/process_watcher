@@ -6,3 +6,13 @@
 
 // Bootstrap
 @import 'bootstrap/scss/bootstrap';
+
+.breadcrum {
+    font-size: 6pt;
+    a {
+        color: navy;
+    }
+    a:hover {
+        color: red;
+    }
+}

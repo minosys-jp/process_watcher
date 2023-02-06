@@ -41,6 +41,13 @@
         <div class="text-center text-white bg-danger">{{ $failure }}</div>
         @endif
 
+	{{-- breadcrums --}}
+        @if (isset($breads))
+	<div class="text-right breadcrum">
+        {!! \App\Libs\Common::expandBreads($breads) !!}
+	</div>
+        @endif
+
         {{-- Content Wrapper --}}
         @empty($iFrameEnabled)
             @include('adminlte::partials.cwrapper.cwrapper-default')

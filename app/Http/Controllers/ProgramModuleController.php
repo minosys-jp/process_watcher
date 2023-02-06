@@ -51,7 +51,13 @@ class ProgramModuleController extends Controller
         if (!auth()->user()->tenant_id || $host->domain->tenant_id != auth()->user()->tenant_id) {
             abort(404);
         }
-        return view('modules.index')->with(compact('modules'));
+        $breads = [
+            'ホーム' => route('home'),
+            'ドメイン一覧' => route('domain.index'),
+            'ホスト一覧' => route('hostname.index', $hosname->domain_id),
+            'モジュール一覧' => route('hostname.show', $hostid),
+        ];
+        return view('modules.index')->with(compact('modules', 'breads'));
     }
 
     public function sha_history($modid) {
@@ -60,8 +66,19 @@ class ProgramModuleController extends Controller
               ->where('finger_prints.program_module_id', $modid)
               ->orderBy('finger_prints.id', 'desc')
               ->paginate(50);
-
-        return view('modules.sha_history')->with(compact('shas'));
+	$mod = ProgramModule::find($modid);
+        $breads = [
+            'ホーム' => route('home'),
+            'ドメイン一覧' => route('domain.index'),
+            'ホスト一覧' => route('hostname.index', $mod->hostname->domain_id),
+            'モジュール一覧' => route('hostname.show', ['hostname' => $mod->hostname_id]),
+        ];
+        $flg_parent = Graph::where('parent_id', $modid)->exists();
+	if (!$flg_parent) {
+            $breads['親グラフ履歴'] = route('module.graph_history', $modid);
+	}
+        $breads['更新履歴'] = route('module.sha_history', $modid);
+        return view('modules.sha_history')->with(compact('shas', 'flg_parent', 'breads'));
     }
 
     public function change_status(Request $req, $modid) {
@@ -86,7 +103,15 @@ class ProgramModuleController extends Controller
             ->where('g.parent_id', $modid)
             ->orderBy('module_logs.id', 'desc')
             ->paginate(50);
-        return view('modules.graph_history')->with(compact('mlogs'));
+        $mod = ProgramModule::find($modid);
+        $breads = [
+            'ホーム' => route('home'),
+            'ドメイン一覧' => route('domain.index'),
+            'ホスト一覧' => route('hostname.index', $mod->hostname->domain_id),
+            'モジュール一覧' => route('hostname.show', ['hostname' => $mod->hostname_id]),
+	    '親グラフ履歴' => route('module.graph_history', $modid),
+        ];
+        return view('modules.graph_history')->with(compact('mlogs', 'breads'));
     }
 
     public function child_history($mlogid) {
@@ -95,6 +120,7 @@ class ProgramModuleController extends Controller
                 ->join('module_logs as ml', 'ml.id', 'gm.module_log_id')
                 ->where('ml.id', $mlogid)
                 ->paginate(50);
+        $parent_id = null;
         foreach ($graphs as $g) {
             $id = ModuleLog::join('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
                 ->join('graphs as g', 'g.id', 'gm.graph_id')
@@ -107,7 +133,17 @@ class ProgramModuleController extends Controller
                 $status = ModuleLog::FLG_GRAY;
             }
             $g->status = $status;
+            $parent_id = $g->parent_id;
         }
-        return view('modules.child_history')->with(compact('graphs'));
+        $mod = ProgramModule::find($parent_id);
+        $breads = [
+            'ホーム' => route('home'),
+            'ドメイン一覧' => route('domain.index'),
+            'ホスト一覧' => route('hostname.index', $mod->hostname->domain_id),
+            'モジュール一覧' => route('hostname.show', ['hostname' => $mod->hostname_id]),
+	    '親グラフ履歴' => route('module.graph_history', $parent_id),
+            '従属 DLL 群' => route('module.child_history', $mlogid),
+        ];
+        return view('modules.child_history')->with(compact('graphs', 'breads'));
     }
 }

@@ -19,7 +19,11 @@ class UserController extends Controller
     {
         //
         $users = User::paginate(50);
-        return view('users/index', compact('users'));
+        $breads = [
+            'ホーム' => route('home'),
+            '管理者一覧' => route('user.index'),
+        ];
+        return view('users.index', compact('users', 'breads'));
     }
 
     /**
@@ -30,11 +34,15 @@ class UserController extends Controller
     public function create()
     {
         //
+        $breads = [
+            'ホーム' => route('home'),
+            '管理者作成' => route('user.create'),
+        ];
         if (!auth()->user()->tenant_id) {
             $tenants = Tenant::all();
-            return view('users/create')->with(compact('tenants'));
+            return view('users.create')->with(compact('tenants', 'breads'));
         }
-        return view('users/create');
+        return view('users.create')->with(compact('breads'));
     }
 
     /**
@@ -82,7 +90,12 @@ class UserController extends Controller
             session()->flash('flashFailure', 'ユーザが定義されていません');
             return redirect()->route('user.index');
         }
-        return view('users.edit')->with(compact('user'));
+        $breads = [
+            'ホーム' => route('home'),
+            '管理者一覧' => route('user.index'),
+            '管理者編集' => route('user.edit', $id),
+        ];
+        return view('users.edit')->with(compact('user', 'breads'));
     }
 
     /**

@@ -22,7 +22,11 @@ class TenantController extends Controller
         } else {
             $tenants = Tenant::paginate(50);
         }
-        return view('tenants.index')->with(compact('tenants'));
+        $breads = [
+            'ホーム' => route('home'),
+            'テナント一覧' => route('tenant.index'),
+        ];
+        return view('tenants.index')->with(compact('tenants', 'breads'));
     }
 
     /**
@@ -36,7 +40,11 @@ class TenantController extends Controller
         if (auth()->user()->tenant_id) {
             abort(404);
         }
-        return view('tenants.create');
+        $breads = [
+            'ホーム' => route('home'),
+            'テナント作成' => route('tenant.create'),
+        ];
+        return view('tenants.create')->with(compact('breads'));
     }
 
     /**
@@ -93,7 +101,12 @@ class TenantController extends Controller
             session()->flash('flashFailure', 'テナントが定義されていません');
             return redirect()->route('tenant.index');
         }
-        return view('tenants.edit')->with(compact('tenant'));
+        $breads = [
+            'ホーム' => route('home'),
+            'テナント一覧' => route('tenant.index'),
+            'テナント編集' => route('tenant.edit', $id),
+        ];
+        return view('tenants.edit')->with(compact('tenant', 'breads'));
     }
 
     /**

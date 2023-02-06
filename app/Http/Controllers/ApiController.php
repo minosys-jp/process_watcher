@@ -24,9 +24,9 @@ class ApiController extends Controller
     public function post(Request $request) {
     Log::debug("enter post");
         // パラメータ取り出し
-        $tenant_code = $request->tenant;
-        $domain_code = $request->domain;
-        $host_code = $request->hostname;
+        $tenant_code = trim($request->tenant);
+        $domain_code = trim($request->domain);
+        $host_code = trim($request->hostname);
         $fingers = $request->fingers;
         $graphs = $request->graphs;
         $xtable1 = [];
@@ -135,7 +135,7 @@ Log::debug("graphs:" . count($graphs));
         $fprints = null;
         $proc = ProgramModule::select('program_modules.*', 'finger_prints.finger_print', 'finger_prints.id as fp_id')
             ->join('finger_prints', 'finger_prints.program_module_id', 'program_modules.id')
-            ->where('program_modules.name', $finger['name'])
+            ->where('program_modules.name', trim($finger['name']))
             ->where('program_modules.hostname_id', $hostname->id)
             ->whereNull('finger_prints.next_id')
             ->first();
@@ -145,14 +145,14 @@ Log::debug("graphs:" . count($graphs));
             }
             $finger = new FingerPrint;
             $finger->program_module_id = $proc->id;
-            $finger->finger_print = $finger['finger'];
+            $finger->finger_print = trim($finger['finger']);
             $finger->save();
             $status = ModuleLog::FLG_GRAY;
             $fingerOld = null;
             // 新しい Module Log は FLG_GRAY
             if ($proc->fp_id) {
                 $fingerOld = FingerPrint::find($proc->fp_id);
-                $status = $fingerOld->program_module()->getStatus();
+                $status = $fingerOld->program_module->getStatus();
                 $fingerOld->next_id = $finger->id;
                 $fingerOld->save();
             }
@@ -160,7 +160,6 @@ Log::debug("graphs:" . count($graphs));
             // finger print の新規登録
             $status = ($status === ModuleLog::FLG_WHITE) ? ModuleLog::FLG_BLACK1 : $status;
             $mlogNew = new ModuleLog;
-            $mlogNew->program_module_id = $proc->id;
             $mlogNew->status = $status;
             $mlogNew->finger_print_id = $finger->id;
             $mlogNew->save();
@@ -168,33 +167,35 @@ Log::debug("graphs:" . count($graphs));
         }
 
         $proc = new ProgramModule;
-        $proc->name = $finger['name'];
+        $proc->name = trim($finger['name']);
         $proc->hostname_id = $hostname->id;
         $proc->save();
 
-        $finger = new FingerPrint;
-        $finger->program_module_id = $proc->id;
-        $finger->finger_print = $finger['finger'];
-        $finger->save();
+        $oFinger = new FingerPrint;
+        $oFinger->program_module_id = $proc->id;
+        $oFinger->finger_print = trim($finger['finger']);
+	Log::debug($proc->id . ":" . $finger['finger']);
+        $oFinger->save();
 
         $mlog = new ModuleLog;
-        $mlog->finger_print_id = $finger->id;
+        $mlog->finger_print_id = $oFinger->id;
         $mlog->save();
 
-        return $finger->id;
+        return $oFinger->id;
     }
 
     // graph の検出と更新
     private function updateGraph(&$cache, $exe, $dlls, $xtable2) {
-        $logid = ModuleLog::leftJoin('graph_module_log gm', 'gm.module_log_id', 'module_logs.id')
-            ->leftJoin('graphs g', 'g.id', 'gm.graph_id')
-            ->leftJoin('program_modules p0', 'p0.id', 'g.program_module_id')
-            ->leftJoin('program_modules p1', 'p1.id', 'g.program_module_id')
-            ->where('p0.id', $exe->id)
-            ->where('p1.id', $exe->id)
+        $logid = ModuleLog::leftJoin('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
+            ->leftJoin('graphs as g', 'g.id', 'gm.graph_id')
+            ->where(function($q) use ($exe) {
+                $q->where('g.parent_id', $exe->id)
+                  ->orWhere('g.child_id', $exe->id);
+            })
+            ->where('g.child_id', $exe->id)
             ->max('module_logs.id');
         if ($logid) {
-            $graphsOld = ModuleLog::find($logid()->graphs()->pluck('graphs.id');
+            $graphsOld = ModuleLog::find($logid)->graphs()->pluck('graphs.id');
         } else {
             $graphsOld = collect([]);
         }
@@ -235,14 +236,27 @@ Log::debug("graphs:" . count($graphs));
         }
         $pmod = ProgramModule::where('id', $xtable2[$modid])
             ->first();
-        $cache[$hid][$modname] = $pmod;
+        $cache[$hid][$modid] = $pmod;
         return $pmod;
     }
 
     // BLACK2 に分類されている id を返す
     private function getBlack2($xtable1) {
-        $blacks = ModuleLog::where('status', ModuleLog::FLG_BLACK2)->pluck('program_module_id')->toArray();
-        $black_ids = array_map(function($d) use ($xtable1) { return $xtable1[$d]; }, array_filter(function($d) use ($xtable1) { return in_array($d, $xtable1); }, $blacks);
+       $currents = ModuleLog::select(DB::raw('max(module_logs.id) as log_id'),  'pm.id')
+            ->leftJoin('finger_prints as f', 'f.id', 'module_logs.finger_print_id')
+            ->leftJoin('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
+            ->leftJoin('graphs as g', 'g.id', 'gm.graph_id')
+	    ->leftJoin('program_modules as pm', function($q) {
+		    $q->on('pm.id', 'f.program_module_id')
+                      ->orOn('pm.id', 'g.parent_id');
+              })
+            ->groupBy(['pm.id'])
+            ->getQuery();
+        $blacks = ModuleLog::leftJoinSub($currents, 'md', 'module_logs.id', 'md.log_id')
+            ->where('module_logs.status', ModuleLog::FLG_BLACK2)
+            ->pluck('md.id')->toArray();
+
+        $black_ids = array_map(function($d) use ($xtable1) { return $xtable1[$d]; }, array_filter($blacks, function($d) use ($xtable1) { return in_array($d, $xtable1); }));
         return $black_ids;
     }
 }

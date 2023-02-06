@@ -48,7 +48,12 @@ class HostnameController extends Controller
             }
             $h->status = $status;
         }
-        return view('hostnames.index')->with(compact('hostnames'));
+        $breads = [
+            'ホーム' => route('home'),
+            'ドメイン一覧' => route('domain.index'),
+            'ホスト一覧' => route('hostname.index', $did),
+        ];
+        return view('hostnames.index')->with(compact('hostnames', 'breads'));
     }
 
     /**
@@ -61,6 +66,7 @@ class HostnameController extends Controller
             abort(404);
         }
         $modules = ProgramModule::select('program_modules.*')
+                 ->join('graphs as g', 'g.parent_id', 'program_modules.id')
                  ->where('hostname_id', $hid);
         if ($search) {
             $modules = $modules->where('name', 'like', "%$search%");
@@ -86,7 +92,13 @@ class HostnameController extends Controller
             }
             $pm->status = $status;
         }
-        return view('hostnames.show')->with(compact('hostname', 'modules', 'search'));
+        $breads = [
+            'ホーム' => route('home'),
+            'ドメイン一覧' => route('domain.index'),
+	    'ホスト一覧' => route('hostname.index', $hostname->domain_id),
+	    'モジュール一覧' => route('hostname.show', $hid),
+        ];
+        return view('hostnames.show')->with(compact('hostname', 'modules', 'search', 'breads'));
     }
 
     /**
@@ -97,7 +109,13 @@ class HostnameController extends Controller
         if (!$hostname) {
             abort(404);
         }
-        return view('hostnames.edit')->with(compact('hostname'));
+        $breads = [
+            'ホーム' => route('home'),
+            'ドメイン一覧' => route('domain.index'),
+	    'ホスト一覧' => route('hostname.index', $hostname->domain_id),
+	    'ホスト編集' => route('hostname.edit', $hid),
+        ];
+        return view('hostnames.edit')->with(compact('hostname', 'breads'));
     }
 
     /**
