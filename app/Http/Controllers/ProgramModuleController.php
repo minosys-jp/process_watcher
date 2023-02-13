@@ -97,9 +97,16 @@ class ProgramModuleController extends Controller
     }
 
     public function graph_history($modid) {
+        $sub = Graph::select(DB::raw('max(graphs.child_id) as child_id'), 'gm.module_log_id as log_id')
+            ->join('graph_module_log as gm', 'gm.graph_id', 'graphs.id')
+            ->groupBy(['log_id'])->getQuery();
         $mlogs = ModuleLog::select('module_logs.*')
             ->join('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
             ->join('graphs as g', 'g.id', 'gm.graph_id')
+            ->joinSub($sub, "sub", function($q) {
+                $q->on('sub.log_id', 'module_logs.id')
+                  ->on("sub.child_id", "g.child_id");
+            })
             ->where('g.parent_id', $modid)
             ->orderBy('module_logs.id', 'desc')
             ->paginate(50);

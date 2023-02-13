@@ -87,19 +87,19 @@ Log::debug("fingers:" . count($fingers));
             // 実行ファイルグラフの更新
             $cache = [];
             if ($graphs && is_array($graphs)) {
-Log::debug("graphs:" . count($graphs));
                 foreach ($graphs as $graph) {
                     $exe = $graph['exe'];
                     if (!array_key_exists('dlls', $graph)) {
                         continue;
                     }
                     $dlls = $graph['dlls'];
-                    $module_exe = $this->loadModule($cache, $exe, $hostname->id, $xtable2);
+                    $module_exe = $this->loadModule($cache, $exe, $xtable2);
                     if (!$module_exe) {
                         Log::error("missing " . $exe);
                         continue;
                     }
                     $this->updateGraph($cache, $module_exe, $dlls, $xtable2);
+Log::debug($xtable2[$exe] . "(" . $exe . ") => [" . implode(",", array_map(function($e) use ($xtable2) { return $xtable2[$e]; }, $dlls)) . "](" . implode(",", $dlls) . ")");
                 }
             }
 
@@ -163,7 +163,7 @@ Log::debug("graphs:" . count($graphs));
             $mlogNew->status = $status;
             $mlogNew->finger_print_id = $finger->id;
             $mlogNew->save();
-            return $finger->id;
+            return $proc->id;
         }
 
         $proc = new ProgramModule;
@@ -181,7 +181,7 @@ Log::debug("graphs:" . count($graphs));
         $mlog->finger_print_id = $oFinger->id;
         $mlog->save();
 
-        return $oFinger->id;
+        return $proc->id;
     }
 
     // graph の検出と更新
@@ -195,9 +195,9 @@ Log::debug("graphs:" . count($graphs));
             ->where('g.child_id', $exe->id)
             ->max('module_logs.id');
         if ($logid) {
-            $graphsOld = ModuleLog::find($logid)->graphs()->pluck('graphs.id');
+            $graphsOld = ModuleLog::find($logid)->graphs()->pluck('graphs.id')->toArray();
         } else {
-            $graphsOld = collect([]);
+            $graphsOld = [];
         }
         $status = $exe->getStatus();
         $bChanged = FALSE;
@@ -205,6 +205,11 @@ Log::debug("graphs:" . count($graphs));
         foreach ($dlls as $dll_id) {
             $dll = $this->loadModule($cache, $dll_id, $xtable2);
             if (!$dll) {
+                if (array_key_exists($dll_id, $xtable2)) {
+                    Log::debug("failed to load dll:" . $dll_id . ":" . $xtable2[$dll_id]);
+                } else {
+                    Log::debug("failed to load dll:" . $dll_id);
+		}
                 continue;
             }
             $oGraph = Graph::where('parent_id', $exe->id)
@@ -214,29 +219,42 @@ Log::debug("graphs:" . count($graphs));
                 $oGraph->parent_id = $exe->id;
                 $oGraph->child_id = $dll->id;
                 $oGraph->save();
+Log::debug("created new Graph:" . $oGraph->id . ":" . $exe->id . "=>" . $dll->id);
             }
             $graphs[] = $oGraph->id;
         }
 
-        // 差集合が空集合でない場合は新たな ModuleLog を作成する
-        if ($graphsOld->diff($graphs)->count() > 0) {
+        // 差集合が空集合でない"場合は新たな ModuleLog を作成する
+Log::debug("graphsOld:" . implode(",", $graphsOld));
+Log::debug("graphs:" . implode(",", $graphs));
+        if ($this->checkDiff($graphsOld, $graphs)) {
+Log::debug("diff found");
             $mlog = new ModuleLog;
             $mlog->status = ($status == ModuleLog::FLG_WHITE ? ModuleLog::FLG_BLACK1 : $status);
             $mlog->save();
             $mlog->graphs()->sync($graphs);
-        }
+	} else {
+Log::debug("no diffs");
+	}
     }
 
-    private function loadModule(&$cache, int $modid, int $hid, $xtable2) {
-        if (isset($cache[$hid][$modid])) {
-            return $cache[$hid][$modid];
+    private function checkDiff($graphsOld, $graphs) {
+        $sub1 = array_filter($graphsOld, function($e) use ($graphs) { return !in_array($e, $graphs); });
+        $sub2 = array_filter($graphs, function($e) use ($graphsOld) { return !in_array($e, $graphsOld); });
+Log::debug("sub1:" . implode(",", $sub1). ":" . count($sub1));
+Log::debug("sub2:" . implode(",", $sub2). ":" . count($sub2));
+        return count($sub1) > 0 || count($sub2) > 0;
+    }
+
+    private function loadModule(&$cache, int $modid, $xtable2) {
+	    /*
+        if (isset($cache[$modid])) {
+            return $cache[$modid];
         }
-        if (!array_key_exists($hid, $cache)) {
-            $cache[$hid] = [];
-        }
+	     */
         $pmod = ProgramModule::where('id', $xtable2[$modid])
             ->first();
-        $cache[$hid][$modid] = $pmod;
+        //$cache[$modid] = $pmod;
         return $pmod;
     }
 

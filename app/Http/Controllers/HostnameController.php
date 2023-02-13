@@ -9,6 +9,7 @@ use App\Models\Domain;
 use App\Models\Hostname;
 use App\Models\ProgramModule;
 use App\Models\ModuleLog;
+use App\Models\Graph;
 
 class HostnameController extends Controller
 {
@@ -65,8 +66,11 @@ class HostnameController extends Controller
         if (!$hostname) {
             abort(404);
         }
+        $sub = Graph::select('parent_id', DB::raw('min(child_id)'))
+            ->groupBy('parent_id')
+            ->getQuery();
         $modules = ProgramModule::select('program_modules.*')
-                 ->join('graphs as g', 'g.parent_id', 'program_modules.id')
+                 ->joinSub($sub, 'g', 'g.parent_id', 'program_modules.id')
                  ->where('hostname_id', $hid);
         if ($search) {
             $modules = $modules->where('name', 'like', "%$search%");
