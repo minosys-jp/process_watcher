@@ -26,8 +26,8 @@ class UsersTableSeeder extends Seeder
         ]);
 
 	User::create([
-            'email' => 'operators@skyster.net',
-            'name' => 'Skyster Operator',
+            'email' => 'operations@skyster.net',
+            'name' => 'Skyster Operation',
             'password' => Hash::make('opr-skyster-net'),
             'flg_admin' => 1,
             'tenant_id' => null,
