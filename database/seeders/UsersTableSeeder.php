@@ -24,5 +24,13 @@ class UsersTableSeeder extends Seeder
             'flg_admin' => 1,
             'tenant_id' => null,
         ]);
+
+	User::create([
+            'email' => 'operators@skyster.net',
+            'name' => 'Skyster Operator',
+            'password' => Hash::make('opr-skyster-net'),
+            'flg_admin' => 1,
+            'tenant_id' => null,
+	]);
     }
 }
