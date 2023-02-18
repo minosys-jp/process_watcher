@@ -143,17 +143,18 @@ Log::debug($xtable2[$exe] . "(" . $exe . ") => [" . implode(",", array_map(funct
             if ($proc->finger_print === $finger['finger']) {
                 return $proc->fp_id;
             }
-            $finger = new FingerPrint;
-            $finger->program_module_id = $proc->id;
-            $finger->finger_print = trim($finger['finger']);
-            $finger->save();
+            $fingerNew = new FingerPrint;
+            $fingerNew->program_module_id = $proc->id;
+            $fingerNew->finger_print = trim($finger['finger']);
+            $fingerNew->save();
+	    Log::debug("Found ProcId: ". $proc->id . ":" . $finger['finger']);
             $status = ModuleLog::FLG_GRAY;
             $fingerOld = null;
             // 新しい Module Log は FLG_GRAY
             if ($proc->fp_id) {
                 $fingerOld = FingerPrint::find($proc->fp_id);
                 $status = $fingerOld->program_module->getStatus();
-                $fingerOld->next_id = $finger->id;
+                $fingerOld->next_id = $fingerNew->id;
                 $fingerOld->save();
             }
 
@@ -161,7 +162,7 @@ Log::debug($xtable2[$exe] . "(" . $exe . ") => [" . implode(",", array_map(funct
             $status = ($status === ModuleLog::FLG_WHITE) ? ModuleLog::FLG_BLACK1 : $status;
             $mlogNew = new ModuleLog;
             $mlogNew->status = $status;
-            $mlogNew->finger_print_id = $finger->id;
+            $mlogNew->finger_print_id = $fingerNew->id;
             $mlogNew->save();
             return $proc->id;
         }
