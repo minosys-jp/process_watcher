@@ -37,9 +37,12 @@ class NotifyDiscord extends Command
      * notify to discord server
      */
     private function notify2Discord($last_updated, $next_update) {
-        $mlogs = ModuleLog::where('flg_discord', 0)->get();
+        $mlogs = ModuleLog::where('flg_discord', 0)
+               ->where('status', '>=', ModuleLog::FLG_BLACK1)
+               ->get();
         $discords = [];
         $hash = [];
+Log::debug("notify2Discord: got mlogs\n");
         foreach ($mlogs as $mlog) {
             if ($mlog->finger_print_id) {
                 // finger print
@@ -102,6 +105,7 @@ class NotifyDiscord extends Command
             'Content-Type: application/json',
             'Accept: application/json',
         ];
+Log::debug("send discord:" . count($discords));
         foreach ($discords as $url => $content) {
             $options = [
                 'content' => $content,
@@ -122,6 +126,7 @@ class NotifyDiscord extends Command
                ->where('status', '>=', ModuleLog::FLG_BLACK1)
                ->get();
         $hash = [];
+Log::debug("notify2DEmail: got mlogs\n");
         foreach ($mlogs as $mlog) {
             if ($mlog->finger_print_id) {
                 // finger print
@@ -171,6 +176,7 @@ class NotifyDiscord extends Command
                 usleep(10000);
             }
         }
+Log::debug("sent emails");
     }
 
     /**
@@ -187,6 +193,7 @@ class NotifyDiscord extends Command
         $last_updated = new Carbon($last_updated_config);
         $next_update = new Carbon;
 
+Log::debug("start NotifyDiscord command");
         try {
             DB::beginTransaction();
             $this->notify2Discord($last_updated, $next_update);

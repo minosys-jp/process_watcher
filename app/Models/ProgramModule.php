@@ -28,18 +28,21 @@ class ProgramModule extends Model
    
     // 最新のログを返す
     public function getLatestLogId() {
-        $log = ModuleLog::select('module_logs.*')
-          ->leftJoin('finger_prints as f', 'module_logs.finger_print_id', 'f.id')
-          ->leftJoin('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
-          ->join('graphs as g', 'g.id', 'gm.graph_id')
-          ->leftJoin('program_modules as p1', 'g.parent_id', 'p1.id')
-          ->leftJoin('program_modules as p2', 'g.child_id', 'p2.id')
-          ->where('f.program_module_id', $this->id)
-          ->where('p1.id', $this->id)
-          ->where('p2.id', $this->id)
-          ->orderBy('module_logs.id', 'desc')
-          ->first();
-        return $log;
+        $id = $this->id;
+        $log_f = ModuleLog::join('finger_prints as f', 'module_logs.finger_print_id', 'f.id')
+           ->where('f.program_module_id', $id)
+           ->max('module_logs.id');
+	$log_g = ModuleLog::join('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
+           ->join('graphs as g', 'g.id', 'gm.graph_id')
+           ->where(function($q) use ($id) {
+               $q->where('g.parent_id', $id);
+           })
+           ->max('module_logs.id');
+	$id = $log_f ? ($log_g ? max($log_f, $log_g) : $log_f) : $log_g;
+	if ($id) {
+            return ModuleLog::find($id);
+        }
+        return null;
     }
 
     // モジュールの状態を返す

@@ -68,8 +68,14 @@ class ApiController extends Controller
 		Log::debug("new host");
             }
     
+	    // flg_publish の確認
+	    $flg_publish = 1;
+	    if ($request->has('flg_publish')) {
+                $flg_publish = $request->flg_publish;
+	    }
+
             // フィンガープリントの更新
-            if ($fingers && is_array($fingers)) {
+            if ($flg_publish && $fingers && is_array($fingers)) {
 Log::debug("fingers:" . count($fingers));
                 foreach ($fingers as $finger) {
                     if (!array_key_exists('dbid', $finger) || !array_key_exists('name', $finger) || !array_key_exists('finger', $finger)) {
@@ -86,7 +92,7 @@ Log::debug("fingers:" . count($fingers));
 
             // 実行ファイルグラフの更新
             $cache = [];
-            if ($graphs && is_array($graphs)) {
+            if ($flg_publish && $graphs && is_array($graphs)) {
                 foreach ($graphs as $graph) {
                     $exe = $graph['exe'];
                     if (!array_key_exists('dlls', $graph)) {
@@ -119,6 +125,8 @@ Log::debug($xtable2[$exe] . "(" . $exe . ") => [" . implode(",", array_map(funct
             if ($nKillBlackProc !== null && $nKillBlackProc->cnum) {
                 $rVal['kill_black_processes'] = $this->getBlack2($xtable1);
             }
+	    Log::debug("flg_publish:".$hostname->flg_publish);
+	    $rVal['flg_publish'] = ($hostname->flg_publish >= 1) ? 1 : 0;
 
             DB::commit();
         } catch (\Exception $e) {
@@ -141,7 +149,7 @@ Log::debug($xtable2[$exe] . "(" . $exe . ") => [" . implode(",", array_map(funct
             ->first();
         if ($proc) {
             if ($proc->finger_print === $finger['finger']) {
-                return $proc->fp_id;
+                return $proc->id;
             }
             $fingerNew = new FingerPrint;
             $fingerNew->program_module_id = $proc->id;
@@ -275,7 +283,14 @@ Log::debug("sub2:" . implode(",", $sub2). ":" . count($sub2));
             ->where('module_logs.status', ModuleLog::FLG_BLACK2)
             ->pluck('md.id')->toArray();
 
-        $black_ids = array_map(function($d) use ($xtable1) { return $xtable1[$d]; }, array_filter($blacks, function($d) use ($xtable1) { return in_array($d, $xtable1); }));
+        $keys = array_keys($xtable1);
+        $bf = array_filter($blacks, function($d) use ($keys) {
+            return in_array($d, $keys);
+        });
+	$bf = array_values($bf);
+	Log::debug("JSON1:".json_encode($bf));
+        $black_ids = array_map(function($d) use ($xtable1) { return $xtable1[$d]; }, $bf);
+	Log::debug("JSON2:".json_encode($black_ids));
         return $black_ids;
     }
 }
