@@ -189,13 +189,14 @@ Log::debug("sent emails");
     {
         $last_updated_config = Configure::select('id', 'cvalue')->where('ckey', 'next_update')->first();
         $config_id = null;
+        $last_updated = null;
         if (!$last_updated_config) {
             $last_updated = '2022-01-01 00:00:00';
         } else {
             $last_updated = $last_updated_config->cvlaue;
             $config_id = $last_updated_config->id;
         }
-        $last_updated = new Carbon($last_updated_config);
+        $last_updated = new Carbon($last_updated);
         $next_update = new Carbon;
 
 Log::debug("start NotifyDiscord command");
