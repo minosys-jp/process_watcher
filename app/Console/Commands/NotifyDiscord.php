@@ -188,7 +188,7 @@ Log::debug("sent emails");
     public function handle()
     {
         $last_updated_config = Configure::select('id', 'cvalue')->where('ckey', 'next_update')->first();
-        $configId = null;
+        $config_id = null;
         if (!$last_updated_config) {
             $last_updated = '2022-01-01 00:00:00';
         } else {

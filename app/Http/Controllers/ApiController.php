@@ -200,11 +200,7 @@ Log::debug($xtable2[$exe] . "(" . $exe . ") => [" . implode(",", array_map(funct
     private function updateGraph(&$cache, $exe, $dlls, $xtable2) {
         $logid = ModuleLog::leftJoin('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
             ->leftJoin('graphs as g', 'g.id', 'gm.graph_id')
-            ->where(function($q) use ($exe) {
-                $q->where('g.parent_id', $exe->id)
-                  ->orWhere('g.child_id', $exe->id);
-            })
-            ->where('g.child_id', $exe->id)
+            ->where('g.parent_id', $exe->id)
             ->max('module_logs.id');
         if ($logid) {
             $graphsOld = ModuleLog::find($logid)->graphs()->pluck('graphs.id')->toArray();
