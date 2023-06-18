@@ -24,30 +24,12 @@ class HostnameController extends Controller
         $domain = Domain::find($did);
         $hostnames = Hostname::where('domain_id', $did)->paginate(50);
         foreach ($hostnames as $h) {
-            $fid = ModuleLog::leftJoin('finger_prints as f', 'f.id', 'module_logs.finger_print_id')
-                 ->leftJoin('program_modules as pm', 'pm.id', 'f.program_module_id')
-                 ->leftJoin('hostnames as h', 'h.id', 'pm.hostname_id')
-                 ->where('h.domain_id', $did)
-                 ->max('module_logs.id');
-            $pid = ModuleLog::leftJoin('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
-                 ->leftJoin('graphs as g', 'g.id', 'gm.graph_id')
-                 ->leftJoin('program_modules as pm', 'pm.id', 'g.parent_id')
-                 ->leftJoin('hostnames as h', 'h.id', 'pm.hostname_id')
-                 ->where('h.domain_id', $did)
-                 ->max('module_logs.id');
-            $cid = ModuleLog::leftJoin('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
-                 ->leftJoin('graphs as g', 'g.id', 'gm.graph_id')
-                 ->leftJoin('program_modules as pm', 'pm.id', 'g.child_id')
-                 ->leftJoin('hostnames as h', 'h.id', 'pm.hostname_id')
-                 ->where('h.domain_id', $did)
-                 ->max('module_logs.id');
-            $id = max($fid, $pid, $cid);
-            if ($id) {
-                $status = ModuleLog::find($id)->status;
-            } else {
-                $status = ModuleLog::FLG_GRAY;
-            }
-            $h->status = $status;
+            $hostnameAlarm = Hostname::select('hostnames.id', DB::RAW('max(program_modules.alarm) AS alarm'))
+                ->join('program_modules', 'program_modules.hostname_id', 'hostnames.id')
+                ->where('hostnames.id', $h->id)
+                ->groupBy('hostnames.id')
+                ->first();
+            $h->status = $hostnameAlarm ? $hostnameAlarm->alarm : \App\Models\ModuleLog::FLG_GRAY;
         }
         $breads = [
             'ホーム' => route('home'),

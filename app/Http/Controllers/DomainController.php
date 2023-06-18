@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Models\Tenant;
 use App\Models\Domain;
 use App\Models\ModuleLog;
@@ -22,30 +23,13 @@ class DomainController extends Controller
             $vars['tenant'] = Tenant::find($tenant_id);
             $vars['domains'] = Domain::where('tenant_id', $tenant_id)->paginate(50)->appends(['tenant' => $tenant_id]);
             foreach ($vars['domains'] as $d) {
-                $fid = ModuleLog::leftJoin('finger_prints as f', 'f.id', 'module_logs.finger_print_id')
-                    ->leftJoin('program_modules as pm', 'pm.id', 'f.program_module_id')
-                    ->leftJoin('hostnames as h', 'h.id', 'pm.hostname_id')
-                    ->where('h.domain_id', $d->id)
-                    ->max('module_logs.id');
-                $pid = ModuleLog::leftJoin('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
-                    ->leftJoin('graphs as g', 'g.id', 'gm.graph_id')
-                    ->leftJoin('program_modules as pm', 'pm.id', 'g.parent_id')
-                    ->leftJoin('hostnames as h', 'h.id', 'pm.hostname_id')
-                    ->where('h.domain_id', $d->id)
-                    ->max('module_logs.id');
-                $cid = ModuleLog::leftJoin('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
-                    ->leftJoin('graphs as g', 'g.id', 'gm.graph_id')
-                    ->leftJoin('program_modules as pm', 'pm.id', 'g.child_id')
-                    ->leftJoin('hostnames as h', 'h.id', 'pm.hostname_id')
-                    ->where('h.domain_id', $d->id)
-                    ->max('module_logs.id');
-                $id = max($fid, $pid, $cid); 
-                if ($id) {
-                    $status = ModuleLog::find($id)->status;
-                } else {
-                    $status = ModuleLog::FLG_GRAY;
-                }
-                $d->status = $status;
+                $domainId = Domain::select('domains.id', DB::RAW('max(program_modules.alarm) AS alarm'))
+                    ->join('hostnames', 'hostnames.domain_id', 'domains.id')
+                    ->join('program_modules', 'program_modules.hostname_id', 'hostnames.id')
+                    ->where('hostnames.domain_id', $d->id)
+                    ->groupBy('domains.id')
+                    ->first();
+                $d->status = $domainId ? $domainId->alarm : \App\Models\ModuleLog::FLG_GRAY;
             }
         }
         $vars['tenants'] = auth()->user()->tenant_id ? Tenant::where('id', $tenant_id)->get() : Tenant::get();

@@ -167,11 +167,14 @@ Log::debug($xtable2[$exe] . "(" . $exe . ") => [" . implode(",", array_map(funct
             }
 
             // finger print の新規登録
-            $status = ($status === ModuleLog::FLG_WHITE) ? ModuleLog::FLG_BLACK1 : $status;
+            $statusNew = ($status === ModuleLog::FLG_WHITE) ? ModuleLog::FLG_BLACK1 : $status;
             $mlogNew = new ModuleLog;
-            $mlogNew->status = $status;
+            $mlogNew->status = $statusNew;
             $mlogNew->finger_print_id = $fingerNew->id;
             $mlogNew->save();
+            if ($statusNew > $status) {
+                $proc->status = $statusNew;
+            }
             return $proc->id;
         }
 
@@ -239,7 +242,12 @@ Log::debug("graphs:" . implode(",", $graphs));
         if ($this->checkDiff($graphsOld, $graphs)) {
 Log::debug("diff found");
             $mlog = new ModuleLog;
-            $mlog->status = ($status == ModuleLog::FLG_WHITE ? ModuleLog::FLG_BLACK1 : $status);
+            $statusNew = ($status == ModuleLog::FLG_WHITE ? ModuleLog::FLG_BLACK1 : $status);
+            if ($statusNew > $status) {
+                $exe->status = $statusNew;
+                $exe->save();
+            }
+            $mlog->status = $statusNew;
             $mlog->save();
             $mlog->graphs()->sync($graphs);
 	} else {

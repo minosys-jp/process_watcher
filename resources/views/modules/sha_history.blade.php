@@ -34,7 +34,8 @@
                         @foreach ($shas as $sha)
                         <tr>
                             <td>{{ $sha->id }}</td>
-                            <td class="@if ($sha->status >= \App\Models\ModuleLog::FLG_BLACK1) red @endif ">{{ \App\Models\ModuleLog::FLG_NAMES[$sha->status] }}
+                            <?php $status = $sha->status ?? \App\Models\ModuleLog::FLG_GRAY; ?>
+                            <td class="@if ($status >= \App\Models\ModuleLog::FLG_BLACK1) red @endif ">{{ \App\Models\ModuleLog::FLG_NAMES[$status] }}
                             <td>{{ $sha->finger_print }}</td>
                             <td>{{ $sha->created_at }}</td>
                         </tr>
