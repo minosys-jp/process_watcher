@@ -101,6 +101,8 @@ class ProgramModuleController extends Controller
               ->pluck('graph_id')->toArray();
               $log->graphs()->sync($graph_ids);
         }
+        $pm->alarm = $req->status;
+        $pm->save();
         session()->flash('flashSuccess', '状態を更新しました');
         return redirect()->route('module.sha_history', $modid);
     }
