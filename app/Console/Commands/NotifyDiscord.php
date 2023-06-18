@@ -39,6 +39,7 @@ class NotifyDiscord extends Command
     private function notify2Discord($last_updated, $next_update) {
         $mlogs = ModuleLog::where('flg_discord', 0)
                ->where('status', '>=', ModuleLog::FLG_BLACK1)
+               ->whereBetween('created_at', [$last_updated, $next_update])
                ->get();
         $discords = [];
         $hash = [];
@@ -124,6 +125,7 @@ Log::debug("send discord:" . count($discords));
     public function notify2Email($last_updated, $next_update) {
         $mlogs = ModuleLog::where('flg_discord', 0)
                ->where('status', '>=', ModuleLog::FLG_BLACK1)
+               ->whereBetween('created_at', [$last_updated, $next_update])
                ->get();
         $hash = [];
 Log::debug("notify2DEmail: got mlogs\n");
@@ -170,7 +172,6 @@ Log::debug("notify2DEmail: got mlogs\n");
                 if (count($to) === 0) {
                     continue;
                 }
-                $to = implode(',', $to);
                 $dname = Domain::find($did)->name;
                 \Mail::to($to)->send(new DiffNotifyMail($dname, $hosts));
                 usleep(10000);
@@ -186,9 +187,13 @@ Log::debug("sent emails");
      */
     public function handle()
     {
-        $last_updated_config = Configure::select('cvalue')->where('ckey', 'next_update')->first();
+        $last_updated_config = Configure::select('id', 'cvalue')->where('ckey', 'next_update')->first();
+        $configId = null;
         if (!$last_updated_config) {
-            $last_updated_config = '2022-01-01 00:00:00';
+            $last_updated = '2022-01-01 00:00:00';
+        } else {
+            $last_updated = $last_updated_config->cvlaue;
+            $config_id = $last_updated_config->id;
         }
         $last_updated = new Carbon($last_updated_config);
         $next_update = new Carbon;
@@ -198,6 +203,16 @@ Log::debug("start NotifyDiscord command");
             DB::beginTransaction();
             $this->notify2Discord($last_updated, $next_update);
             $this->notify2Email($last_updated, $next_update);
+            if ($config_id) {
+                $config = Configure::find($config_id);
+                $config->next_update = $next_update;
+                $config->save();
+            } else {
+                $config = new Configure;
+                $config->ckey = 'next_update';
+                $config->cvalue = $next_update;
+                $config->save();
+            }
             ModuleLog::where('flg_discord', 0)->update(['flg_discord' => 1]);
             DB::commit();
         } catch (\Exception $e) {
