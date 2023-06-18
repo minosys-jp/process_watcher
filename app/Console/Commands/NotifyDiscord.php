@@ -206,7 +206,7 @@ Log::debug("start NotifyDiscord command");
             $this->notify2Email($last_updated, $next_update);
             if ($config_id) {
                 $config = Configure::find($config_id);
-                $config->next_update = $next_update;
+                $config->cvalue = $next_update;
                 $config->save();
             } else {
                 $config = new Configure;
