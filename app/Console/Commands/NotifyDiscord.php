@@ -39,11 +39,12 @@ class NotifyDiscord extends Command
     private function notify2Discord($last_updated, $next_update) {
         $mlogs = ModuleLog::where('flg_discord', 0)
                ->where('status', '>=', ModuleLog::FLG_BLACK1)
-               ->whereBetween('created_at', [$last_updated, $next_update])
-               ->get();
+               ->whereBetween('created_at', [$last_updated, $next_update]);
+        $mlogs = $mlogs->get();
         $discords = [];
         $hash = [];
-Log::debug("notify2Discord: got mlogs\n");
+Log::debug($last_updated . ":" . $next_update);
+Log::debug("notify2Discord: got mlogs:" . $mlogs->count() . "\n");
         foreach ($mlogs as $mlog) {
             if ($mlog->finger_print_id) {
                 // finger print
@@ -193,21 +194,21 @@ Log::debug("sent emails");
         if (!$last_updated_config) {
             $last_updated = '2022-01-01 00:00:00';
         } else {
-            $last_updated = $last_updated_config->cvlaue;
+            $last_updated = $last_updated_config->cvalue;
             $config_id = $last_updated_config->id;
         }
-        $last_updated = new Carbon($last_updated);
-        $next_update = new Carbon;
+Log::debug("last_updated:" . $last_updated);
+        $last_updated = Carbon::parse($last_updated);
+        $next_update = Carbon::now();
 
 Log::debug("start NotifyDiscord command");
         try {
             DB::beginTransaction();
             $this->notify2Discord($last_updated, $next_update);
             $this->notify2Email($last_updated, $next_update);
-            if ($config_id) {
-                $config = Configure::find($config_id);
-                $config->cvalue = $next_update;
-                $config->save();
+            if ($last_updated_config) {
+                $last_updated_config->cvalue = $next_update;
+                $last_updated_config->save();
             } else {
                 $config = new Configure;
                 $config->ckey = 'next_update';

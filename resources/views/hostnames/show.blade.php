@@ -11,14 +11,31 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h3>{{ $hostname->name }}</h3>
-                    <form>
-                        <div class="form-group">
-                            <label for="search">検索文字列</label>
-                            <input type="text" id="search" name="search" @empty ($search) value="{{ old('search') }}" @else value="{{ old('search', $search) }}" @endempty >
-                        </div>
-                        <button class="btn btn-primary">検索</button>
-                    </form>
+                    <div class="col-6">
+                        <h3>{{ $hostname->name }}</h3>
+                        <form>
+                            <div class="form-group">
+                                <label for="search">検索文字列</label>
+                                <input type="text" id="search" name="search" @empty ($search) value="{{ old('search') }}" @else value="{{ old('search', $search) }}" @endempty >
+                                <button class="btn btn-primary">検索</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="col-6">
+                        <form method="post">
+                            @csrf
+                            <div class="form-group">
+                                <label for="change">プロセス状態の更新</label>
+                                <select id="status" name="status">
+                                    <option value="{{ \App\Models\ModuleLog::FLG_GRAY }}">GRAY</option>
+                                    <option value="{{ \App\Models\ModuleLog::FLG_WHITE }}" selected>WHITE</option>
+                                    <option value="{{ \App\Models\ModuleLog::FLG_BLACK1 }}">BLACK1 (停止なし)</option>
+                                    <option value="{{ \App\Models\ModuleLog::FLG_BLACK2 }}">BLACK2 (停止あり)</option>
+                                </select>
+                                <button class="btn btn-primary">更新</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
                 <div class="card-body">
                     <table class="table">
@@ -33,7 +50,8 @@
                         <tr>
                             <td>{{ $module->id }}</td>
                             <td>{{ $module->name }}</td>
-                            <td class="@if ($module->status >= \App\Models\ModuleLog::FLG_BLACK1) red @endif ">{{ \App\Models\ModuleLog::FLG_NAMES[$module->status] }}</td>
+                            <?php $status = $module->getStatus(); ?>
+                            <td class="@if ($status >= \App\Models\ModuleLog::FLG_BLACK1) red @endif ">{{ \App\Models\ModuleLog::FLG_NAMES[$status] }}</td>
                             <td>{{ $module->updated_at }}</td>
                             <td>
                                 <a href="{{ route('module.sha_history', $module->id) }}"class="btn btn-success">更新履歴</a>

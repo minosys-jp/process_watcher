@@ -240,7 +240,7 @@ Log::debug("diff found");
             $mlog = new ModuleLog;
             $statusNew = ($status == ModuleLog::FLG_WHITE ? ModuleLog::FLG_BLACK1 : $status);
             if ($statusNew > $status) {
-                $exe->status = $statusNew;
+                $exe->alarm = $statusNew;
                 $exe->save();
             }
             $mlog->status = $statusNew;

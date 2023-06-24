@@ -47,7 +47,6 @@ class ProgramModule extends Model
 
     // モジュールの状態を返す
     public function getStatus() {
-        $log = $this->getLatestLogId();
-        return $log ? $log->status : ModuleLog::FLG_GRAY;
+        return $this->alarm;
     }
 }

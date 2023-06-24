@@ -10,9 +10,16 @@ use App\Models\Hostname;
 use App\Models\ProgramModule;
 use App\Models\ModuleLog;
 use App\Models\Graph;
+use App\Libs\Common;
 
 class HostnameController extends Controller
 {
+    public $lib;
+
+    public function __construct(Common $lib) {
+        $this->lib = $lib;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -58,26 +65,6 @@ class HostnameController extends Controller
             $modules = $modules->where('name', 'like', "%$search%");
         }
         $modules = $modules->paginate(50);
-        foreach ($modules as $pm) {
-            $f_mid = ModuleLog::leftJoin('finger_prints as f', 'f.id', 'module_logs.finger_print_id')
-              ->where('f.program_module_id', $pm->id)
-              ->max('module_logs.id');
-            $p_mid = ModuleLog::leftJoin('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
-                   ->leftJoin('graphs as g', 'g.id', 'gm.graph_id')
-                   ->where('g.parent_id', $pm->id)
-                   ->max('module_logs.id');
-            $c_mid = ModuleLog::leftJoin('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
-                   ->leftJoin('graphs as g', 'g.id', 'gm.graph_id')
-                   ->where('g.child_id', $pm->id)
-                   ->max('module_logs.id');
-            $id = max($f_mid, $p_mid, $c_mid);
-            if ($id) {
-                $status = ModuleLog::find($id)->status;
-            } else {
-                $status = ModuleLog::FLG_GRAY;
-            }
-            $pm->status = $status;
-        }
         $breads = [
             'ホーム' => route('home'),
             'ドメイン一覧' => route('domain.index'),
@@ -85,6 +72,22 @@ class HostnameController extends Controller
 	    'モジュール一覧' => route('hostname.show', $hid),
         ];
         return view('hostnames.show')->with(compact('hostname', 'modules', 'search', 'breads'));
+    }
+
+    /**
+     * ホストの状態変更
+     */
+    public function change(Request $req, $hid) {
+        $host = Hostname::find($hid);
+        if (!$host) {
+            abort(404);
+        }
+        $modules = $host->program_modules;
+        foreach ($modules as $pm) {
+            $this->lib->change_status($req, $pm);
+        }
+        session()->flash('flashSuccess', 'ホストの状態を更新しました');
+        return redirect()->route('hostname.show', $hid);
     }
 
     /**
