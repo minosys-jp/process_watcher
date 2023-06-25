@@ -208,6 +208,7 @@ Log::debug($xtable2[$exe] . "(" . $exe . ") => [" . implode(",", array_map(funct
             $graphsOld = [];
         }
         $status = $exe->getStatus();
+        $statusNew = $status;
         $bChanged = FALSE;
         $graphs = [];
         foreach ($dlls as $dll_id) {
@@ -228,28 +229,22 @@ Log::debug($xtable2[$exe] . "(" . $exe . ") => [" . implode(",", array_map(funct
                 $oGraph->child_id = $dll->id;
                 $oGraph->save();
 Log::debug("created new Graph:" . $oGraph->id . ":" . $exe->id . "=>" . $dll->id);
-            } else if ($status !== ModuleLog::FLG_GRAY) {
-                $status = ($dll->alarm > $status) ? $dll->status : $status;
+            } else if ($statusNew !== ModuleLog::FLG_GRAY) {
+                $statusNew = ($dll->alarm > $statusNew) ? $dll->status : $statusNew;
             }
             $graphs[] = $oGraph->id;
         }
 
-        // 差集合が空集合でない"場合は新たな ModuleLog を作成する
 Log::debug("graphsOld:" . implode(",", $graphsOld));
 Log::debug("graphs:" . implode(",", $graphs));
-        if ($this->checkDiff($graphsOld, $graphs)) {
-Log::debug("diff found");
-            $mlog = new ModuleLog;
-            $statusNew = ($status == ModuleLog::FLG_WHITE ? ModuleLog::FLG_BLACK1 : $status);
-            if ($statusNew > $status) {
-                $exe->alarm = $status;
-                $exe->save();
-            }
-            $mlog->status = $status;
-            $mlog->save();
-            $mlog->graphs()->sync($graphs);
-	} else {
-Log::debug("no diffs");
+        // 差集合に変化があっても、DLLが健全ならログを作成しない
+        if ($statusNew !== $status) {
+            $log = new ModuleLog;
+            $log->status = $statusNew;
+            $log->save();
+            $log->graphs()->sync($graphs);
+            $exe->alarm = $statusNew;
+            $exe->save();
 	}
     }
 

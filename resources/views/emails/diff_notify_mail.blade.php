@@ -1,4 +1,4 @@
-以下のBLACKプログラムが検出されました。({{ \Carbon\Carbon::now()->format('Y-m-d H:i:s') }})
+以下のプログラム状態の変更を検出しました。({{ \Carbon\Carbon::now()->format('Y-m-d H:i:s') }})
 
 -*-*- {{ $dname }} ドメイン -*-*-
 @foreach ($programs as $hname => $hosts)
