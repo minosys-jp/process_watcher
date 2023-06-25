@@ -228,6 +228,8 @@ Log::debug($xtable2[$exe] . "(" . $exe . ") => [" . implode(",", array_map(funct
                 $oGraph->child_id = $dll->id;
                 $oGraph->save();
 Log::debug("created new Graph:" . $oGraph->id . ":" . $exe->id . "=>" . $dll->id);
+            } else if ($status !== ModuleLog::FLG_GRAY) {
+                $status = ($dll->alarm > $status) ? $dll->status : $status;
             }
             $graphs[] = $oGraph->id;
         }
@@ -240,10 +242,10 @@ Log::debug("diff found");
             $mlog = new ModuleLog;
             $statusNew = ($status == ModuleLog::FLG_WHITE ? ModuleLog::FLG_BLACK1 : $status);
             if ($statusNew > $status) {
-                $exe->alarm = $statusNew;
+                $exe->alarm = $status;
                 $exe->save();
             }
-            $mlog->status = $statusNew;
+            $mlog->status = $status;
             $mlog->save();
             $mlog->graphs()->sync($graphs);
 	} else {
