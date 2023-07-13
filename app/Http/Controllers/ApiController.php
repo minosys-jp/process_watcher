@@ -167,11 +167,14 @@ Log::debug($xtable2[$exe] . "(" . $exe . ") => [" . implode(",", array_map(funct
             }
 
             // finger print の新規登録
-            $status = ($status === ModuleLog::FLG_WHITE) ? ModuleLog::FLG_BLACK1 : $status;
+            $statusNew = ($status === ModuleLog::FLG_WHITE) ? ModuleLog::FLG_BLACK1 : $status;
             $mlogNew = new ModuleLog;
-            $mlogNew->status = $status;
+            $mlogNew->status = $statusNew;
             $mlogNew->finger_print_id = $fingerNew->id;
             $mlogNew->save();
+            if ($statusNew > $status) {
+                $proc->status = $statusNew;
+            }
             return $proc->id;
         }
 
@@ -197,11 +200,7 @@ Log::debug($xtable2[$exe] . "(" . $exe . ") => [" . implode(",", array_map(funct
     private function updateGraph(&$cache, $exe, $dlls, $xtable2) {
         $logid = ModuleLog::leftJoin('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
             ->leftJoin('graphs as g', 'g.id', 'gm.graph_id')
-            ->where(function($q) use ($exe) {
-                $q->where('g.parent_id', $exe->id)
-                  ->orWhere('g.child_id', $exe->id);
-            })
-            ->where('g.child_id', $exe->id)
+            ->where('g.parent_id', $exe->id)
             ->max('module_logs.id');
         if ($logid) {
             $graphsOld = ModuleLog::find($logid)->graphs()->pluck('graphs.id')->toArray();
@@ -209,6 +208,7 @@ Log::debug($xtable2[$exe] . "(" . $exe . ") => [" . implode(",", array_map(funct
             $graphsOld = [];
         }
         $status = $exe->getStatus();
+        $statusNew = $status;
         $bChanged = FALSE;
         $graphs = [];
         foreach ($dlls as $dll_id) {
@@ -229,21 +229,22 @@ Log::debug($xtable2[$exe] . "(" . $exe . ") => [" . implode(",", array_map(funct
                 $oGraph->child_id = $dll->id;
                 $oGraph->save();
 Log::debug("created new Graph:" . $oGraph->id . ":" . $exe->id . "=>" . $dll->id);
+            } else if ($statusNew !== ModuleLog::FLG_GRAY) {
+                $statusNew = ($dll->alarm > $statusNew) ? $dll->status : $statusNew;
             }
             $graphs[] = $oGraph->id;
         }
 
-        // 差集合が空集合でない"場合は新たな ModuleLog を作成する
 Log::debug("graphsOld:" . implode(",", $graphsOld));
 Log::debug("graphs:" . implode(",", $graphs));
-        if ($this->checkDiff($graphsOld, $graphs)) {
-Log::debug("diff found");
-            $mlog = new ModuleLog;
-            $mlog->status = ($status == ModuleLog::FLG_WHITE ? ModuleLog::FLG_BLACK1 : $status);
-            $mlog->save();
-            $mlog->graphs()->sync($graphs);
-	} else {
-Log::debug("no diffs");
+        // 差集合に変化があっても、DLLが健全ならログを作成しない
+        if ($statusNew !== $status) {
+            $log = new ModuleLog;
+            $log->status = $statusNew;
+            $log->save();
+            $log->graphs()->sync($graphs);
+            $exe->alarm = $statusNew;
+            $exe->save();
 	}
     }
 

@@ -17,6 +17,7 @@
                         <div class="form-group">
                             <label for="status">プロセス状態の更新</label>
                             <select id="status" name="status">
+                                <option value="{{ \App\Models\ModuleLog::FLG_GRAY }}">GRAY</option>
                                 <option value="{{ \App\Models\ModuleLog::FLG_WHITE }}" selected>WHITE</option>
                                 <option value="{{ \App\Models\ModuleLog::FLG_BLACK1 }}">BLACK1 (停止なし)</option>
                                 <option value="{{ \App\Models\ModuleLog::FLG_BLACK2 }}">BLACK2 (停止あり)</option>
@@ -34,7 +35,8 @@
                         @foreach ($shas as $sha)
                         <tr>
                             <td>{{ $sha->id }}</td>
-                            <td class="@if ($sha->status >= \App\Models\ModuleLog::FLG_BLACK1) red @endif ">{{ \App\Models\ModuleLog::FLG_NAMES[$sha->status] }}
+                            <?php $status = $sha->status ?? \App\Models\ModuleLog::FLG_GRAY; ?>
+                            <td class="@if ($status >= \App\Models\ModuleLog::FLG_BLACK1) red @endif ">{{ \App\Models\ModuleLog::FLG_NAMES[$status] }}
                             <td>{{ $sha->finger_print }}</td>
                             <td>{{ $sha->created_at }}</td>
                         </tr>

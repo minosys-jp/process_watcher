@@ -9,10 +9,17 @@ use App\Models\ProgramModule;
 use App\Models\Graph;
 use App\Models\FingerPrint;
 use App\Models\ModuleLog;
+use App\Libs\Common;
 
 class ProgramModuleController extends Controller
 {
+    private $lib;
+
     //
+    public function __construct(Common $lib) {
+        $this->lib = $lib;
+    }
+
     public function index($hostid) {
         $modules = ProgramModule::select('program_modules.*')
             ->join('modules_logs', 'module_logs.id', 'sub.log_id')
@@ -23,27 +30,6 @@ class ProgramModuleController extends Controller
         if (!$modules) {
             abort(404);
         }
-        foreach ($modules as $pm) {
-            $fmid = ModuleLog::leftJoin('finger_prints as f', 'f.id', 'module_logs.finger_print_id')
-                  ->where('f.program_module_id', $pm->id)
-                  ->max('module_logs.id');
-            $pmid = ModuleLog::leftJoin('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
-                  ->leftJoin('graphs as g', 'g.id', 'gm.graph_id')
-                  ->where('g.parent_id', $pm->id)
-                  ->max('module_logs.id');
-            $cmid = ModuleLog::leftJoin('graph_module_log as gm', 'gm.module_log_id', 'module_logs.id')
-                  ->leftJoin('graphs as g', 'g.id', 'gm.graph_id')
-                  ->where('g.child_id', $pm->id)
-                  ->max('module_logs.id');
-            $id = max($fmid, $pmid, $cmid);
-            if ($id) {
-                $status = ModuleLog::find($id)->status;
-            } else {
-                $status = ModuleLog::FLG_GRAY;
-            }
-            $pm->status = $status;
-        }
-
         $host = Hostname::find($hostid);
         if (!$host) {
             abort(404);
@@ -86,21 +72,7 @@ class ProgramModuleController extends Controller
         if (!$pm) {
             abort(404);
         }
-        $logOld = $pm->getLatestLogId();
-
-        // 新規にログを作成する
-        $log = new ModuleLog;
-        $log->status = $req->status;
-	if ($logOld->finger_print_id) {
-            $log->finger_print_id = $logOld->finger_print_id;
-        }
-        $log->save();
-        if (!$logOld->finger_print_id) {
-              $graph_ids = DB::table('graph_module_log')
-              ->where('module_log_id', $logOld->id)
-              ->pluck('graph_id')->toArray();
-              $log->graphs()->sync($graph_ids);
-        }
+        $this->lib->change_status($req, $pm);
         session()->flash('flashSuccess', '状態を更新しました');
         return redirect()->route('module.sha_history', $modid);
     }
