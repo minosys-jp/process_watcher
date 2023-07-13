@@ -10,6 +10,18 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
+                <div class="card-header">
+                    <form method="post" action="{{ route()->name('hostname.csv', $did) }}">
+                        @csrf
+                        <div>検出履歴の出力(CSV)</div>
+                        <select name="ym">
+                        @foreach ($selectors as $key => $value)
+                            <option value="{{ $key }}">{{ $value }}</option>
+                        @endforeach
+                        </select>
+                        <button>CSV出力</button>
+                    </form>
+                </div>
                 <div class="card-body">
                     <table class="table">
                         <tr>

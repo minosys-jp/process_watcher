@@ -46,6 +46,7 @@ Route::group(['middleware' => ['auth']], function() {
     Route::get('/hostname/{hostname}/edit', [HostnameController::class, 'edit'])->name('hostname.edit');
     Route::put('/hostname/{hostname}', [HostnameController::class, 'update'])->name('hostname.update');
     Route::get('/hostname/{hostname}/module', [ProgramModuleController::class, 'index'])->name('module.index');
+    Route::get('/hostname/{domain}/csv', [HostnameController::class, 'csv'])->name('hostname.csv');
     Route::get('/module/{module}/sha_history', [ProgramModuleController::class, 'sha_history'])->name('module.sha_history');
     Route::put('/module/{module}/sha_history', [ProgramModuleController::class, 'change_status'])->name('module.sha_history');
     Route::get('/module/{module}/graph_history', [ProgramModuleController::class, 'graph_history'])->name('module.graph_history');
