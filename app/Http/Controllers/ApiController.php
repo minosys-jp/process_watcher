@@ -148,7 +148,7 @@ Log::debug($xtable2[$exe] . "(" . $exe . ") => [" . implode(",", array_map(funct
             ->whereNull('finger_prints.next_id')
             ->first();
         if ($proc) {
-            if ($proc->finger_print === $finger['finger']) {
+            if (empty(trim($finger['finger'])) || $proc->finger_print === $finger['finger']) {
                 return $proc->id;
             }
             $fingerNew = new FingerPrint;

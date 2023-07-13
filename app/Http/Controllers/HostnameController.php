@@ -33,8 +33,10 @@ class HostnameController extends Controller
         $selectors = [];
         $startDate = Carbon::parse('2023-06-01');
         $endDate = Carbon::now();
+        $endDate->day = 0;
         while ($startDate->lt($endDate)) {
             $selectors[$startDate->format('Y-m-01')] = $startDate->format('Y年m月');
+            $startDate->addMonth();
         }
         $hostnames = Hostname::where('domain_id', $did)->paginate(50);
         foreach ($hostnames as $h) {
@@ -131,14 +133,15 @@ class HostnameController extends Controller
     /**
      * 対象Domainの変更検知 CSV を出力する
      */
-    public function csv(Request $requests, $did) {
-        $startDate = Carbon::parse($request->ym)
+    public function csv(Request $request, $did) {
+        $startDate = Carbon::parse($request->ym);
         $endDate = $startDate->copy()->addMonth();
-        $sql = Hostname::join('program_modules', 'program_modules.hostname_id', 'hostnames.domain_id')
-            ->join('finger_prints', 'finger_prints.hostname_id', 'hostnames.id')
+        $endDate->day = 0;
+        $sql = Hostname::join('program_modules', 'program_modules.hostname_id', 'hostnames.id')
+            ->join('finger_prints', 'finger_prints.program_module_id', 'program_modules.id')
             ->select('hostnames.name as hostname', 'program_modules.name', 'finger_prints.created_at')
             ->where('hostnames.domain_id', $did)
-            ->whereBetween('finger_prints.created_at', [$startDate, $endDate]))
+            ->whereBetween('finger_prints.created_at', [$startDate, $endDate])
             ->orderBy('hostname')
             ->orderBy('program_modules.name')
             ->orderBy('finger_prints.created_at');
@@ -148,7 +151,7 @@ class HostnameController extends Controller
             stream_filter_prepend($stream, 'convert.iconv.utf-8/cp932//TRANSLIT');
             fputcsv($stream, ['ホスト名', 'プログラム名', '変更検出日時' ]);
             foreach ($sql->cursor() as $item) {
-                fputcsv([$item->hostname, $item->name, $item->created_at]);
+                fputcsv($stream, [$item->hostname, $item->name, $item->created_at]);
             }
             fclose($stream);
         };

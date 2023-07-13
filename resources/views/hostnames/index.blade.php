@@ -11,7 +11,7 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <form method="post" action="{{ route()->name('hostname.csv', $did) }}">
+                    <form method="post" action="{{ route('hostname.csv', $did) }}">
                         @csrf
                         <div>検出履歴の出力(CSV)</div>
                         <select name="ym">
