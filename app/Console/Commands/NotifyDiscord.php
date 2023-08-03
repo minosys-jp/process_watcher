@@ -43,7 +43,7 @@ class NotifyDiscord extends Command
         $mlogs = $mlogs->get();
         $discords = [];
         $hash = [];
-Log::debug($last_updated . ":" . $next_update);
+Log::debug("updated at " . $next_update);
 Log::debug("notify2Discord: got mlogs:" . $mlogs->count() . "\n");
         foreach ($mlogs as $mlog) {
             if ($mlog->finger_print_id) {
