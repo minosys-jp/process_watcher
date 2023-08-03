@@ -215,7 +215,9 @@ Log::debug("start NotifyDiscord command");
                 $config->cvalue = $next_update;
                 $config->save();
             }
-            ModuleLog::where('flg_discord', 0)->update(['flg_discord' => 1]);
+            ModuleLog::where('flg_discord', 0)
+                ->whereBetween('created_at', [$last_updated, $next_update])
+                ->update(['flg_discord' => 1]);
             DB::commit();
         } catch (\Exception $e) {
             Log::error($e);
