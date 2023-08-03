@@ -36,10 +36,10 @@ class NotifyDiscord extends Command
     /**
      * notify to discord server
      */
-    private function notify2Discord($last_updated, $next_update) {
+    private function notify2Discord($next_update) {
         $mlogs = ModuleLog::where('flg_discord', 0)
                ->where('status', '>=', ModuleLog::FLG_BLACK1)
-               ->whereBetween('created_at', [$last_updated, $next_update]);
+               ->where('created_at', '<=', $next_update);
         $mlogs = $mlogs->get();
         $discords = [];
         $hash = [];
@@ -123,10 +123,10 @@ Log::debug("send discord:" . count($discords));
     /**
      * notify to Email server
      */
-    public function notify2Email($last_updated, $next_update) {
+    public function notify2Email($next_update) {
         $mlogs = ModuleLog::where('flg_discord', 0)
                ->where('status', '>=', ModuleLog::FLG_BLACK1)
-               ->whereBetween('created_at', [$last_updated, $next_update])
+               ->where('created_at', '<=', $next_update)
                ->get();
         $hash = [];
 Log::debug("notify2DEmail: got mlogs\n");
@@ -204,8 +204,8 @@ Log::debug("last_updated:" . $last_updated);
 Log::debug("start NotifyDiscord command");
         try {
             DB::beginTransaction();
-            $this->notify2Discord($last_updated, $next_update);
-            $this->notify2Email($last_updated, $next_update);
+            $this->notify2Discord($next_update);
+            $this->notify2Email($next_update);
             if ($last_updated_config) {
                 $last_updated_config->cvalue = $next_update;
                 $last_updated_config->save();
@@ -216,7 +216,7 @@ Log::debug("start NotifyDiscord command");
                 $config->save();
             }
             ModuleLog::where('flg_discord', 0)
-                ->whereBetween('created_at', [$last_updated, $next_update])
+                ->where('created_at', '<=', $next_update)
                 ->update(['flg_discord' => 1]);
             DB::commit();
         } catch (\Exception $e) {
