@@ -22,7 +22,8 @@ class ProgramModuleController extends Controller
 
     public function index($hostid) {
         $modules = ProgramModule::select('program_modules.*')
-            ->join('modules_logs', 'module_logs.id', 'sub.log_id')
+            ->join('finger_prints f', 'f.program_module_id', 'program_modules.id')
+            ->join('modules_logs ml', 'ml.finger_print_id', 'f.id')
             ->where('hostname_id', $hostid)
             ->join('graphs g', 'g.parent_id', 'program_modules.id')
             ->distinct()
