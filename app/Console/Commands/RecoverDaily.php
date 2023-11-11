@@ -48,7 +48,7 @@ class RecoverDaily extends Command
                 ->insert([
                     'id' => $fields[0],
                     'status' => $fields[1],
-                    'finger_print_id' => $fields[2],
+                    'finger_print_id' => ($fields[2] === '') ?? NULL,
                     'flg_discord' => $fields[3],
                     'created_at' => $fields[4],
                     'updated_at' => $fields[5],
