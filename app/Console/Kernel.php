@@ -17,7 +17,7 @@ class Kernel extends ConsoleKernel
     {
         // $schedule->command('inspire')->hourly();
         $schedule->command('command:NotifyDiscord')->everyFiveMinutes();
-        $schedule->command('command:CreateDaily')->daily();
+        //$schedule->command('command:CreateDaily')->daily();
     }
 
     /**
