@@ -105,7 +105,6 @@ Log::debug("fingers:" . count($fingers));
                         continue;
                     }
                     $this->updateGraph($cache, $module_exe, $dlls, $xtable2);
-Log::debug($xtable2[$exe] . "(" . $exe . ") => [" . implode(",", array_map(function($e) use ($xtable2) { return $xtable2[$e]; }, $dlls)) . "](" . implode(",", $dlls) . ")");
                 }
             }
 
@@ -173,7 +172,8 @@ Log::debug($xtable2[$exe] . "(" . $exe . ") => [" . implode(",", array_map(funct
             $mlogNew->finger_print_id = $fingerNew->id;
             $mlogNew->save();
             if ($statusNew > $status) {
-                $proc->status = $statusNew;
+                $proc->alarm = $statusNew;
+		$proc->save();
             }
             return $proc->id;
         }
@@ -202,8 +202,11 @@ Log::debug($xtable2[$exe] . "(" . $exe . ") => [" . implode(",", array_map(funct
             ->leftJoin('graphs as g', 'g.id', 'gm.graph_id')
             ->where('g.parent_id', $exe->id)
             ->max('module_logs.id');
+	$last_created_at = Carbon::parse("2023-01-01");
         if ($logid) {
-            $graphsOld = ModuleLog::find($logid)->graphs()->pluck('graphs.id')->toArray();
+	    $mlog = ModuleLog::find($logid);
+	    $last_created_at = Carbon::parse($mlog->created_at);
+            $graphsOld = $mlog->graphs()->pluck('graphs.id')->toArray();
         } else {
             $graphsOld = [];
         }
@@ -229,8 +232,8 @@ Log::debug($xtable2[$exe] . "(" . $exe . ") => [" . implode(",", array_map(funct
                 $oGraph->child_id = $dll->id;
                 $oGraph->save();
 Log::debug("created new Graph:" . $oGraph->id . ":" . $exe->id . "=>" . $dll->id);
-            } else if ($statusNew !== ModuleLog::FLG_GRAY) {
-                $statusNew = ($dll->alarm > $statusNew) ? $dll->status : $statusNew;
+            } else {
+                $statusNew = ($dll->alarm > $statusNew) ? $dll->alarm : $statusNew;
             }
             $graphs[] = $oGraph->id;
         }
@@ -245,6 +248,12 @@ Log::debug("graphs:" . implode(",", $graphs));
             $log->graphs()->sync($graphs);
             $exe->alarm = $statusNew;
             $exe->save();
+
+	    // $logid に結合する graphs は削除する
+	    if ($logid) {
+                $mlog = ModuleLog::find($logid);
+                $mlog->graphs()->sync([]);
+	    }
 	}
     }
 

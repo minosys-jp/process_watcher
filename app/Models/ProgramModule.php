@@ -10,7 +10,7 @@ class ProgramModule extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'name', 'hostname_id',
+        'name', 'hostname_id', 'alarm',
     ];
 
     protected $casts = [
