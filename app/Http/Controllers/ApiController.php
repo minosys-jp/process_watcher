@@ -241,7 +241,7 @@ Log::debug("created new Graph:" . $oGraph->id . ":" . $exe->id . "=>" . $dll->id
 Log::debug("graphsOld:" . implode(",", $graphsOld));
 Log::debug("graphs:" . implode(",", $graphs));
         // 差集合に変化があっても、DLLが健全ならログを作成しない
-        if ($statusNew !== $status) {
+        if (!$logid || $statusNew !== $status) {
             $log = new ModuleLog;
             $log->status = $statusNew;
             $log->save();
