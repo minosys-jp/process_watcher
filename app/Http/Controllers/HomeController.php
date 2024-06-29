@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Tenant;
 use App\Models\ModuleLog;
+use App\Models\ProgramModule;
 
 class HomeController extends Controller
 {
@@ -29,6 +30,11 @@ class HomeController extends Controller
 
         $mtenants = [];
         foreach ($tenants as $tenant) {
+		$alarm = ProgramModule::join("hostnames as h", "h.id", "hostname_id")
+			->join("domains as d", "d.id", "h.domain_id")
+			->where("d.tenant_id", $tenant->id)
+			->max('alarm');
+/*
             $mlog_f = ModuleLog::select('module_logs.id')
                 ->join('finger_prints as f', 'f.id', 'module_logs.finger_print_id')
                 ->join('program_modules as pm', 'pm.id', 'f.program_module_id')
@@ -47,10 +53,12 @@ class HomeController extends Controller
             $id_f = ($mlog_f ? $mlog_f->id : 0);
             $id_g = ($mlog_g ? $mlog_g->id : 0);
             $id = max($id_f, $id_g);
+*/
+            $id = 0;
             $mtenants[] = [
                 'id' => $tenant->id,
                 'name' => $tenant->name, 
-                'status' => !$id ? ModuleLog::FLG_GRAY : ModuleLog::find($id)->status,
+                'status' => $alarm
             ];
         }
         return view('home')->with(compact('mtenants'));

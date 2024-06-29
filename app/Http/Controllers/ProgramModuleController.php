@@ -48,9 +48,26 @@ class ProgramModuleController extends Controller
     }
 
     public function sha_history($modid) {
-        $shas = FingerPrint::select('finger_prints.*', 'ml.status')
+        $shas = FingerPrint::select(
+            'finger_prints.id',
+	    'finger_prints.program_module_id',
+	    'finger_prints.finger_print',
+	    'finger_prints.next_id',
+	    'finger_prints.created_at',
+	    'finger_prints.updated_at',
+	    'ml.status',
+	)
               ->leftJoin('module_logs as ml', 'finger_prints.id', 'ml.finger_print_id')
               ->where('finger_prints.program_module_id', $modid)
+	      ->groupBy([
+                  'finger_prints.id',
+		  'finger_prints.program_module_id',
+		  'finger_prints.finger_print',
+	          'finger_prints.next_id',
+	          'finger_prints.created_at',
+	          'finger_prints.updated_at',
+	          'ml.status',
+	      ])
               ->orderBy('finger_prints.id', 'desc')
               ->paginate(50);
 	$mod = ProgramModule::find($modid);

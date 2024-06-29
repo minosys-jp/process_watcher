@@ -43,7 +43,7 @@
                             <th>番号</th>
                             <th>名称</th>
                             <th>状態</th>
-                            <th>最新更新日時</th>
+                            <th>状態変更日時</th>
                             <th>操作</th>
                         </tr>
                         @foreach ($modules as $module)
