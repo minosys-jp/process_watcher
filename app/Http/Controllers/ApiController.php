@@ -210,6 +210,10 @@ Log::debug("fingers:" . count($fingers));
         } else {
             $graphsOld = [];
         }
+        if (!$exe->flg_exe) {
+            $exe->flg_exe = 1;
+	    $exe->save();
+        }
         $status = $exe->getStatus();
         $statusNew = $status;
         $bChanged = FALSE;

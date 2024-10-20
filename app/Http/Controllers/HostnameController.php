@@ -64,12 +64,9 @@ class HostnameController extends Controller
         if (!$hostname) {
             abort(404);
         }
-        $sub = Graph::select('parent_id', DB::raw('min(child_id)'))
-            ->groupBy('parent_id')
-            ->getQuery();
-        $modules = ProgramModule::select('program_modules.*')
-                 ->joinSub($sub, 'g', 'g.parent_id', 'program_modules.id')
-                 ->where('hostname_id', $hid);
+        $modules = ProgramModule::select('*')
+		 ->where('hostname_id', $hid)
+                 ->where('flg_exe', 1);
         if ($search) {
             $modules = $modules->where('name', 'like', "%$search%");
         }

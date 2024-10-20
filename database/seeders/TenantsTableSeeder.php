@@ -18,8 +18,8 @@ class TenantsTableSeeder extends Seeder
         //
         Tenant::create([
             'id' => 1,
-            'code' => 'KEISEI-KAI',
-            'name' => '恵生会',
+            'code' => 'RAPID-AI',
+            'name' => 'RAPID-AI',
         ]);
     }
 }
