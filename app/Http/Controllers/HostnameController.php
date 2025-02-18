@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use App\Models\Tenant;
 use App\Models\Domain;
@@ -88,11 +89,26 @@ class HostnameController extends Controller
         if (!$host) {
             abort(404);
         }
-        $modules = $host->program_modules;
-        foreach ($modules as $pm) {
-            $this->lib->change_status($req, $pm);
+
+	DB::beginTransaction();
+	try {
+Log::debug("Host id:" . $host->id);
+            $modules = $host->program_modules()->where('program_modules.alarm', '!=', ModuleLog::FLG_WHITE)->select('program_modules.*')->get();
+	    Log::debug("Change Status modules:" . $modules->count());
+	    $count = 0;
+            foreach ($modules as $pm) {
+if ($count++ < 10) {
+Log::debug($pm->id . "=>" . $pm->alarm);
+}
+                $this->lib->change_status($req, $pm);
+            }
+            session()->flash('flashSuccess', 'ホストの状態を更新しました');
+	    DB::commit();
+	} catch (\Exception $e) {
+            session()->flash('flashFailure', 'DB エラーが発生しました');
+            // session()->flash('flashFailure', $e->getMessage());
+	    DB::rollback();
         }
-        session()->flash('flashSuccess', 'ホストの状態を更新しました');
         return redirect()->route('hostname.show', $hid);
     }
 
