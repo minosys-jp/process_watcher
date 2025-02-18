@@ -66,8 +66,8 @@ class HostnameController extends Controller
             abort(404);
         }
         $modules = ProgramModule::select('*')
-		 ->where('hostname_id', $hid)
-                 ->where('flg_exe', 1);
+                 ->where('flg_exe', 1)
+		 ->where('hostname_id', $hid);
         if ($search) {
             $modules = $modules->where('name', 'like', "%$search%");
         }
@@ -93,7 +93,7 @@ class HostnameController extends Controller
 	DB::beginTransaction();
 	try {
 Log::debug("Host id:" . $host->id);
-            $modules = $host->program_modules()->where('program_modules.alarm', '!=', ModuleLog::FLG_WHITE)->select('program_modules.*')->get();
+            $modules = $host->program_modules()->where('program_modules.alarm', '!=', $req->status)->select('program_modules.*')->get();
 	    Log::debug("Change Status modules:" . $modules->count());
 	    $count = 0;
             foreach ($modules as $pm) {
