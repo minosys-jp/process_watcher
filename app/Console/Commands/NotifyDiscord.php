@@ -129,7 +129,7 @@ Log::debug("send discord:" . count($discords));
                ->where('created_at', '<=', $next_update)
                ->get();
         $hash = [];
-Log::debug("notify2DEmail: got mlogs\n");
+Log::debug("notify2DEmail: got mlogs:" . $mlogs->count() . "\n");
         foreach ($mlogs as $mlog) {
             if ($mlog->finger_print_id) {
                 // finger print

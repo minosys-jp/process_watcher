@@ -15,6 +15,10 @@
         @include('adminlte::partials.common.preloader')
     @endif
 
+    @if(!empty($breads))
+    <div style="text-align: right">{!! \App\Libs\Common::expandBreads($breads) !!}</div>
+    @endif
+
     {{-- Content Header --}}
     @hasSection('content_header')
         <div class="content-header">
