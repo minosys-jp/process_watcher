@@ -55,7 +55,7 @@ class NotifyPhone extends Command
       * @param $hosts Host/Program name array
       */
     private function send($dname, $hosts) {
-      $subject = "Process_watcher alert mail";
+      $subject = "Process_watcher alert (" . \Carbon\Carbon::now()->format('Y-m-d H:i:s') . ")";
       $json = new Array();
       $json["subject"] = $subject;
       $json["recipients"] = $this->to;
