@@ -60,7 +60,7 @@ class HostnameController extends Controller
      * ホストの詳細表示
      */
     public function show(Request $request, $hid) {
-	$search = $request->search;
+	$search = $request->query('search');
         $hostname = Hostname::find($hid);
         if (!$hostname) {
             abort(404);
@@ -147,7 +147,7 @@ Log::debug($pm->id . "=>" . $pm->alarm);
      * 対象Domainの変更検知 CSV を出力する
      */
     public function csv(Request $request, $did) {
-        $startDate = Carbon::parse($request->ym);
+        $startDate = Carbon::parse($request->query('ym'));
         $endDate = $startDate->copy()->addMonth();
         $endDate->day = 0;
         $sql = Hostname::join('program_modules', 'program_modules.hostname_id', 'hostnames.id')

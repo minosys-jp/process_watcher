@@ -8,21 +8,21 @@ use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use App\Models\ModuleLog;
 
-class CreateDaily extends Command
+class CreateMonthly extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'command:CreateDaily';
+    protected $signature = 'command:CreateMonthly';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Command to create a daily backup';
+    protected $description = 'Command to create a monthly backup';
 
     private function graphBackup($zip, $cutDatetime, $logid) {
         $offset = 0;
@@ -88,7 +88,7 @@ echo "module_logs:" . $count;
      */
     public function handle()
     {
-        $cutDatetime = Carbon::now()->subDay(2);
+        $cutDatetime = Carbon::now()->subMonth(1);
         $logid = ModuleLog::where('created_at', '<', $cutDatetime)
             ->max('id');
         $logid = $logid ?? 0;

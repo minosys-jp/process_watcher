@@ -19,8 +19,8 @@ class ConfigureController extends Controller
         //
         $vars = [];
         if ($request->has('tenant_id')) {
-            $vars['configs'] = Configure::where('tenant_id', $request->tenant_id)->paginate(50);
-            $vars['tenant'] = Tenant::find($request->tenant_id);
+            $vars['configs'] = Configure::where('tenant_id', $request->query('tenant_id'))->paginate(50);
+            $vars['tenant'] = Tenant::find($request->query('tenant_id'));
         }
         $vars['tenants'] = Tenant::get();
         return view('configs.index')->with($vars);
@@ -50,14 +50,14 @@ class ConfigureController extends Controller
         //
         $config = new Configure;
         $config->tenant_id = $tenant_id;
-        if ($request->domain_id) {
-            $config->domain_id = $request->domain_id;
+        if ($request->has('domain_id')) {
+            $config->domain_id = $request->query('domain_id');
         }
-        $config->ckey = $request->ckey;
-        if ($request->cvalue) {
-            $config->cvalue = $request->cvalue;
+        $config->ckey = $request->query('ckey');
+        if ($request->has('cvalue')) {
+            $config->cvalue = $request->query('cvalue');
         } else {
-            $config->cnum = $request->cnum;
+            $config->cnum = $request->query('cnum');
         }
         $config->save();
         session()->flash('flashSuccess', '設定を保存しました');
@@ -101,14 +101,14 @@ class ConfigureController extends Controller
     {
         //
         $config = Configure::find($id);
-        if ($request->domain_id) {
-            $config->domain_id = $request->domain_id;
+        if ($request->has('domain_id')) {
+            $config->domain_id = $request->query('domain_id');
         }
-        $config->ckey = $request->ckey;
-        if ($request->cvalue) {
-            $config->cvalue = $request->cvalue;
+        $config->ckey = $request->query('ckey');
+        if ($request->has('cvalue')) {
+            $config->cvalue = $request->query('cvalue');
         } else {
-            $config->cnum = $request->cnum;
+            $config->cnum = $request->query('cnum');
         }
         $config->save();
         session()->flash('flashSuccess', '設定を更新しました');

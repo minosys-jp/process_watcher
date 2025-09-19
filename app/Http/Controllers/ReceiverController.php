@@ -24,8 +24,8 @@ class ReceiverController extends Controller
             $vars['receivers'] = Receiver::where('tenant_id', $tenant_id)->paginate(50)->appends(['tenant' => $tenant_id]);
             $vars['tenants'] = Tenant::where('id', $tenant_id)->get();
         } else if ($request->has('tenant')) {
-            $vars['tenant'] = Tenant::find($request->tenant);
-            $vars['receivers'] = Receiver::where('tenant_id', $request->tenant)->paginate(50)->appends(['tenant' => $request->tenant]);
+            $vars['tenant'] = Tenant::find($request->query('tenant'));
+            $vars['receivers'] = Receiver::where('tenant_id', $request->query('tenant'))->paginate(50)->appends(['tenant' => $request->query('tenant')]);
             $vars['tenants'] = Tenant::get();
         } else {
             $vars['tenants'] = Tenant::get();
@@ -58,7 +58,7 @@ class ReceiverController extends Controller
     public function store(Request $request)
     {
         //
-        if (!auth()->user()->tenant_id || $request->tenant_id == auth()->user()->tenant_id) {
+        if (!auth()->user()->tenant_id || $request->query('tenant_id') == auth()->user()->tenant_id) {
             $receiver = new Receiver;
             $receiver->fill($request->only(['email', 'tenant_id']));
             $receiver->save();
@@ -118,13 +118,13 @@ class ReceiverController extends Controller
             session()->flash('flashFailure', '受信者が定義されていません');
             return redirect()->route('receiver.index');
         }
-        if (auth()->user()->tenant_id && auth()->user()->tenant_id != $request->tenant_id) {
+        if (auth()->user()->tenant_id && auth()->user()->tenant_id != $request->query('tenant_id')) {
             session()->flash('flashFailure', 'アクセス権がありません');
             return redirect()->route('receiver.index');
         }
         $receiver->fill($request->only(['email']));
         $receiver->save();
-        $receiver->domains()->sync($request->domain_id);
+        $receiver->domains()->sync($request->query('domain_id'));
         session()->flash('flashSuccess', '受信者を更新しました');
         return redirect()->route('receiver.edit', $id);
     }

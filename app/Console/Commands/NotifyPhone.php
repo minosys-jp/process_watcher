@@ -56,19 +56,23 @@ class NotifyPhone extends Command
       */
     private function send($dname, $hosts) {
       $subject = "Process_watcher alert (" . \Carbon\Carbon::now()->format('Y-m-d H:i:s') . ")";
-      $json = new Array();
+      $json = Array();
       $json["subject"] = $subject;
       $json["recipients"] = $this->to;
-      $body = new Array();
-      $body[] = "detected program change events\\n";
-      $body[] = "Domain: " . $dname . "\\n";
-      foreach ($hosts as $hname => $pm) {
-        $body[] = "Host: " . $hname + "\\n";
-        $body[] = implode("\\n", $pm);
-        $body[] = "\\n\\n";
+      $body = Array();
+      if ($dname === null) {
+          $body[] = "No program change events.\n";
+      } else {
+          $body[] = "detected program change events\n";
+          $body[] = "Domain: " . $dname . "\n";
+          foreach ($hosts as $hname => $pm) {
+            $body[] = "Host: " . $hname + "\n";
+            $body[] = implode("\n", $pm);
+            $body[] = "\n\n";
+          }
       }
-      $body[] = "Powered by Skyster Inc.\\n";
-      $json["body"] = implode("\\n", $body);
+      $body[] = "Powered by Skyster Inc.\n";
+      $json["body"] = implode("\n", $body);
       $f = fopen($this->tmpJson, "w");
       fwrite($f, json_encode($json));
       fclose($f);
@@ -113,12 +117,16 @@ Log::debug("invoke " . $this->notifier . " " . $this->tmpJson);
             $hash[$t->id][$d->id][$h->name][] = $pm->name;
         }
 
-        foreach ($hash as $tid => $domains) {
-            foreach ($domains as $did => $hosts) {
-                $dname = Domain::find($did)->name;
-                $this->send($dname, $hosts);
-                usleep(10000);
-            }
+	if (!count($hash) == 0) {
+            $this->send(null, null);
+	} else {
+            foreach ($hash as $tid => $domains) {
+                foreach ($domains as $did => $hosts) {
+                    $dname = Domain::find($did)->name;
+                    $this->send($dname, $hosts);
+                    usleep(10000);
+                }
+	    }
         }
     }
 

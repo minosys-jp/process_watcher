@@ -18,6 +18,7 @@ class Kernel extends ConsoleKernel
         // $schedule->command('inspire')->hourly();
         // $schedule->command('command:NotifyDiscord')->everyFiveMinutes();
         $schedule->command('command:NotifyPhone')->everyFiveMinutes();
+        $schedule->command('command:CreateMonthly')->everyMonth();
         //$schedule->command('command:CreateDaily')->daily();
     }
 

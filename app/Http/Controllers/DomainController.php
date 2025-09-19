@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Models\Tenant;
 use App\Models\Domain;
 use App\Models\ModuleLog;
@@ -18,10 +19,12 @@ class DomainController extends Controller
     public function index(Request $request)
     {
         $vars = [];
-        $tenant_id = auth()->user()->tenant_id ?? $request->tenant;
+	Log::debug("request:".(request()->getQueryString()));
+        $tenant_id = auth()->user()->tenant_id ?? $request->input('tenant');
         if ($tenant_id) {
             $vars['tenant'] = Tenant::find($tenant_id);
             $vars['domains'] = Domain::where('tenant_id', $tenant_id)->paginate(50)->appends(['tenant' => $tenant_id]);
+	    Log::debug("tenant:".$tenant_id.",count:".count($vars['domains']));
             foreach ($vars['domains'] as $d) {
                 $domainId = Domain::select('domains.id', DB::RAW('max(program_modules.alarm) AS alarm'))
                     ->join('hostnames', 'hostnames.domain_id', 'domains.id')
@@ -30,6 +33,7 @@ class DomainController extends Controller
                     ->groupBy('domains.id')
                     ->first();
                 $d->status = $domainId ? $domainId->alarm : \App\Models\ModuleLog::FLG_GRAY;
+		Log::debug("status:".$d->status);
             }
         }
         $vars['tenants'] = auth()->user()->tenant_id ? Tenant::where('id', $tenant_id)->get() : Tenant::get();
@@ -67,7 +71,7 @@ class DomainController extends Controller
     {
         //
         $domain = new Domain;
-        $request->tenant = auth()->user()->tenant_id ?? $request->tenant;
+        $request->tenant = auth()->user()->tenant_id ?? $request->query('tenant');
         $domain->fill($request->all());
         $domain->save();
         return redirect()->route('domain.edit', $domain->id);

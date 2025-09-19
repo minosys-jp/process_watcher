@@ -6,14 +6,14 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
-class RecoverDaily extends Command
+class RecoverMonthly extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'command:RecoverDaily {date? : Date to recover}';
+    protected $signature = 'command:RecoverMonthly {date? : Date to recover}';
     private $backup = "storage/app/backup/";
 
     /**
@@ -21,7 +21,7 @@ class RecoverDaily extends Command
      *
      * @var string
      */
-    protected $description = 'Recover Daily files';
+    protected $description = 'Recover Monthly files';
 
     private function getYMDFromFname($fname) {
         $YMD = str_replace("logs_", "", $fname);
